@@ -1,0 +1,54 @@
+group 'YoungTeam'
+//项目版本
+version = '1.0'
+
+apply plugin: 'java'
+//指定编码环境
+sourceCompatibility = 1.8
+//指定编译环境
+targetCompatibility = 1.8
+//制定仓库
+repositories {
+    mavenCentral()
+    jcenter()
+    mavenLocal()
+    /* 指定的远程仓库 */
+    //maven { url "http://mvnrepository.com/" }
+}
+
+dependencies {
+    compile 'org.apache.logging.log4j:log4j:2.10.0'
+    compile 'org.apache.logging.log4j:log4j-slf4j-impl:2.10.0'
+    compile 'com.lmax:disruptor:3.3.8'
+    compile 'io.netty:netty-all:4.1.31.Final'
+}
+
+//设置编码
+tasks.withType(JavaCompile){
+	options.encoding ="UTF-8"
+}
+//创建JAVA文档
+task createJavadoc(type:Javadoc){
+	source = sourceSets.main.allJava
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs = ['main/']
+        }
+        resources{
+			srcDirs = ['conf']
+		}
+    }
+}
+
+task hello {
+    doLast {
+        println 'Hello world!'
+    }
+}
+
+task helloWorld << {
+	println 'helloWorld343'
+}
