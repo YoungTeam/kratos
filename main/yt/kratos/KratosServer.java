@@ -24,7 +24,6 @@ import org.slf4j.LoggerFactory;
  */
 public class KratosServer {
 
-    private static final String dateFormat = "yyyy-MM-dd HH:mm:ss";
     private static final Logger LOGGER = LoggerFactory.getLogger(KratosServer.class);
     
 	private static final KratosServer INSTANCE = new KratosServer();
@@ -43,19 +42,7 @@ public class KratosServer {
 	public void startup(){
 		
 	}
-	
-	public static void main(String[] args){
-		try{
-		
-			KratosServer.getInstance().startup();;
-			System.out.println("Kratos Server startup successfully. see logs in logs/kratos.log");
-		
-		}catch(Exception e){
-			SimpleDateFormat sdf = new SimpleDateFormat(dateFormat);
-            LOGGER.error(sdf.format(new Date()) + " startup error", e);
-            System.exit(-1);
-		}
-	}
+
 	
 }
    
