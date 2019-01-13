@@ -1,8 +1,10 @@
 group 'YoungTeam'
 //项目版本
-version = '1.0'
+version = '1.0.0'
 
 apply plugin: 'java'
+apply plugin: 'eclipse'
+
 //指定编码环境
 sourceCompatibility = 1.8
 //指定编译环境
@@ -35,7 +37,7 @@ task createJavadoc(type:Javadoc){
 sourceSets {
     main {
         java {
-            srcDirs = ['main/']
+            srcDirs = ['main','server','config','util']
         }
         resources{
 			srcDirs = ['conf']
@@ -43,12 +45,3 @@ sourceSets {
     }
 }
 
-task hello {
-    doLast {
-        println 'Hello world!'
-    }
-}
-
-task helloWorld << {
-	println 'helloWorld343'
-}
