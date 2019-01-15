@@ -17,6 +17,7 @@ package yt.kratos.mysql.packet;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import yt.kratos.mysql.MySQLMsg;
 import yt.kratos.util.BufferUtil;
 
 /**
@@ -92,6 +93,21 @@ public class HandshakeInitialPacket extends MySQLPacket{
 		return "MySQL Handshake Packet";
 	}
 
+    public void read(BinaryPacket bin) {
+        packetLength = bin.packetLength;
+        packetId = bin.packetId;
+        MySQLMsg mm = new MySQLMsg(bin.data);
+        protocolVersion = mm.read();
+        serverVersion = mm.readBytesWithNull();
+        this.connectionId = mm.readUB4();
+        seed = mm.readBytesWithNull();
+        serverCapabilities = mm.readUB2();
+        serverCharsetIndex = mm.read();
+        serverStatus = mm.readUB2();
+        mm.move(13);
+        restOfScrambleBuff = mm.readBytesWithNull();
+    }
+    
     public void write(final ChannelHandlerContext ctx) {
         // default init 256,so it can avoid buff extract
         final ByteBuf buffer = ctx.alloc().buffer();

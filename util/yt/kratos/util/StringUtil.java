@@ -13,32 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package yt.kratos;
+package yt.kratos.util;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import yt.kratos.server.FrontendServer;
-import yt.kratos.util.DateUtil;
+import java.io.UnsupportedEncodingException;
 
 /**
- * @ClassName: Start
- * @Description: Kratos服务启动类
+ * @ClassName: StringUtil
+ * @Description: TODO(这里用一句话描述这个类的作用)
  * @author YoungTeam
- * @date 2019年1月11日 下午3:56:02
+ * @date 2019年1月14日 下午5:16:04
  *
  */
-public class Start {
-	private static final Logger LOGGER = LoggerFactory.getLogger(Start.class);
-	public static void main(String[] args){
-        try {
-            // init
-        	FrontendServer server = FrontendServer.getInstance();
-        	server.startup();
-        	
-        } catch (Throwable e) {
-        	LOGGER.error(DateUtil.now() + " startup error", e);
-            System.exit(-1);
+public class StringUtil {
+    public final static byte[] encodeString(String src, String charset) {
+        if (src == null) {
+            return null;
         }
-	}
+        if (charset == null) {
+            return src.getBytes();
+        }
+        try {
+            return src.getBytes(charset);
+        } catch (UnsupportedEncodingException e) {
+            return src.getBytes();
+        }
+    }
 }

@@ -16,9 +16,9 @@
 package yt.kratos.server;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.Channel;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -27,8 +27,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import yt.kratos.Kratos;
-import yt.kratos.net.codec.MySQLPacketDecoder;
-import yt.kratos.server.handler.MessageHandler;
+import yt.kratos.config.SocketConfig;
+import yt.kratos.net.frontend.handler.factory.FrontendHandlerFactory;
 
 /**
  * @ClassName: KratosServer
@@ -37,9 +37,9 @@ import yt.kratos.server.handler.MessageHandler;
  * @date 2019年1月3日 下午8:34:30
  *
  */
-public class KratosServer {
-	 	private static final Logger LOGGER = LoggerFactory.getLogger(KratosServer.class);
-		private static final KratosServer INSTANCE = new KratosServer();
+public class FrontendServer {
+	 	private static final Logger logger = LoggerFactory.getLogger(FrontendServer.class);
+		private static final FrontendServer instance = new FrontendServer();
 		
 		/***
 		 * 
@@ -48,8 +48,8 @@ public class KratosServer {
 		* @return KratosServer    返回类型
 		* @throws
 		 */
-		public static final KratosServer getInstance() {
-			return INSTANCE;
+		public static final FrontendServer getInstance() {
+			return instance;
 		}
 		
 		public void startup(){
@@ -58,21 +58,22 @@ public class KratosServer {
 	        try {
 	            ServerBootstrap server = new ServerBootstrap();
 	            server.group(boss, worker).channel(NioServerSocketChannel.class)
-	                    .childHandler(new ChannelInitializer<Channel>() {
-
-	                        @Override
-	                        protected void initChannel(Channel ch) throws Exception {
-	                        	ch.pipeline().addLast("input cmd", new MySQLPacketDecoder());//.addLast(new MessageHandler());
-	                            ch.pipeline().addLast("test msg",new MessageHandler());
-	                        }
-
-	                    });
+	            		//设置标识当服务器请求处理线程全满时，用于临时存放已完成三次握手的请求的队列的最大长度
+	             		.option(ChannelOption.SO_BACKLOG, 1024)
+	                    .childHandler(
+	                    		new FrontendHandlerFactory()
+	                    )
+	                    //设置ByteBuf对象的创建方式，PooledByteBufAllocator：可以重复利用之前分配的内存空间
+	                    .option(ChannelOption.ALLOCATOR,PooledByteBufAllocator.DEFAULT)
+	                    //链接超时毫秒数
+		                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, SocketConfig.CONNECT_TIMEOUT_MILLIS)
+		                //控制读取操作将阻塞多少毫秒
+		                .option(ChannelOption.SO_TIMEOUT, SocketConfig.SO_TIMEOUT);	
 
 	            ChannelFuture sync = server.bind(Kratos.SERVER_PORT).sync();
 	            sync.channel().closeFuture().sync();
 	        } catch (InterruptedException e) {
-
-	            e.printStackTrace();
+	        	logger.error("服务监听失败",e);
 	        } finally {
 	            boss.shutdownGracefully();
 	            worker.shutdownGracefully();

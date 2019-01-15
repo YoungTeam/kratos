@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 package yt.kratos.net.frontend.handler.factory;
-import alchemystar.lancelot.common.net.codec.MySqlPacketDecoder;
-import alchemystar.lancelot.common.net.handler.frontend.FrontendAuthenticator;
-import alchemystar.lancelot.common.net.handler.frontend.FrontendConnection;
-import alchemystar.lancelot.common.net.handler.frontend.FrontendGroupHandler;
-import alchemystar.lancelot.common.net.handler.frontend.FrontendTailHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
+import yt.kratos.net.codec.MySQLPacketDecoder;
+import yt.kratos.net.frontend.FrontendConnection;
+import yt.kratos.net.frontend.FrontendConnectionFactory;
+import yt.kratos.net.frontend.handler.FrontendAuthHandler;
+import yt.kratos.net.frontend.handler.FrontendCollectHandler;
+import yt.kratos.net.frontend.handler.FrontendExceptionHandler;
 
 /**
  * @ClassName: FrontendHandlerFactory
@@ -31,23 +32,29 @@ import io.netty.channel.socket.SocketChannel;
  */
 public class FrontendHandlerFactory extends ChannelInitializer<SocketChannel> {
 
+    private FrontendConnectionFactory factory;
+    
+    public FrontendHandlerFactory() {
+        factory = new FrontendConnectionFactory();
+    }
+    
 	/* 
 	* @see io.netty.channel.ChannelInitializer#initChannel(io.netty.channel.Channel)
 	*/ 
 	@Override
 	protected void initChannel(SocketChannel ch) throws Exception {
 		// TODO Auto-generated method stub
-       // FrontendConnection source = factory.getConnection();
-        //FrontendGroupHandler groupHandler = new FrontendGroupHandler(source);
-        FrontendAuthenticator authHandler = new FrontendAuthenticator(source);
-        //FrontendTailHandler tailHandler = new FrontendTailHandler(source);
+        FrontendConnection conn = (FrontendConnection)factory.getConnection();
+        FrontendCollectHandler collectHandler = new FrontendCollectHandler(conn);
+        FrontendAuthHandler authHandler = new FrontendAuthHandler(conn);
+        FrontendExceptionHandler exceptionHandler = new FrontendExceptionHandler(conn);
         // 心跳handler
         //ch.pipeline().addLast(new IdleStateHandler(10, 10, 10));
         // decode mysql packet depend on it's length
-        //ch.pipeline().addLast(new MySqlPacketDecoder());
-        //ch.pipeline().addLast(groupHandler);
+        ch.pipeline().addLast(new MySQLPacketDecoder());
+        ch.pipeline().addLast(collectHandler);
         ch.pipeline().addLast(authHandler);
-        //ch.pipeline().addLast(tailHandler);
+        ch.pipeline().addLast(exceptionHandler);
 	}
 
 }
