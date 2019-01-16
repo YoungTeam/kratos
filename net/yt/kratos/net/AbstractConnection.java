@@ -35,8 +35,8 @@ public abstract class AbstractConnection {
 	   
 	protected ChannelHandlerContext ctx;
 	protected long id; //connection id
-    public String charset;
-    public int charsetIndex;
+	protected String charset;
+    protected int charsetIndex;
 	 
 	public ChannelHandlerContext getCtx() {
 		return ctx;

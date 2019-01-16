@@ -22,14 +22,20 @@ import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.pool.FixedChannelPool;
 import io.netty.channel.socket.nio.NioSocketChannel;
 
+import java.net.InetSocketAddress;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.locks.ReentrantLock;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import yt.kratos.config.SocketConfig;
+import yt.kratos.mysql.config.DatabaseConfig;
+import yt.kratos.net.backend.mysql.handler.MySQLChannelPoolHandler;
+import yt.kratos.net.backend.mysql.handler.factory.MySQLHandlerFactory;
 
 
 
@@ -43,6 +49,7 @@ import org.slf4j.LoggerFactory;
 public class MySQLDataPool {
 	private static final Logger logger = LoggerFactory.getLogger(MySQLDataPool.class);
 
+	private DatabaseConfig dbConfig;
     // 当前连接池中空闲的连接数
     private int idleCount;
     // 最大连接数
@@ -50,7 +57,9 @@ public class MySQLDataPool {
     // 初始化连接数
     private int initSize;
     // 连接池
-    private final MySQLConnection[] items;
+    private FixedChannelPool channelPool;
+    
+    
     // Backend Loop Group
     private EventLoopGroup backendGroup;
     // Backend Bootstrap
@@ -60,50 +69,81 @@ public class MySQLDataPool {
     // 线程间同步的闩锁
     private CountDownLatch latch;
     // get/put的锁
-    private final ReentrantLock lock;
+    //private final ReentrantLock lock;
     // 当前连接池是否被初始化成功的标识
     private final AtomicBoolean initialized;
     // data pool的command allocator
     private ByteBufAllocator allocator;
     
-    public MySQLDataPool(int initSize, int maxPoolSize) {
+    public MySQLDataPool(DatabaseConfig dbConfig,int initSize, int maxPoolSize) {
+    	this.dbConfig = dbConfig;
         this.maxPoolSize = maxPoolSize;
         this.initSize = initSize;
         this.idleCount = 0;
-        this.items = new MySQLConnection[maxPoolSize];
         this.backendGroup = new NioEventLoopGroup();
         this.bootstrap = new Bootstrap();
-        latch = new CountDownLatch(initSize);
-        lock = new ReentrantLock();
+        //latch = new CountDownLatch(initSize);
+       // lock = new ReentrantLock();
         initialized = new AtomicBoolean(false);
         allocator = new UnpooledByteBufAllocator(false);
+        this.init();
     }
     
     public void init(){
-        //this.factory = new MySQLConnectionFactory(this);
-    	this.factory = new MySQLConnectionFactory(this);
+       this.factory = new MySQLConnectionFactory(this);
         // 采用PooledBuf来减少GC
         this.bootstrap.group(backendGroup).channel(NioSocketChannel.class).handler(new MySQLHandlerFactory(factory))
-                .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
-        setOption(b);
-/*        initBackends();
-        initIdleCheck();
-        markInit();*/
+                		.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
+        this.bootstrap.option(ChannelOption.SO_RCVBUF, SocketConfig.Backend_Socket_Recv_Buf);
+        this.bootstrap.option(ChannelOption.SO_SNDBUF, SocketConfig.Backend_Socket_Send_Buf);
+        this.bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS,SocketConfig.CONNECT_TIMEOUT_MILLIS);
+        this.bootstrap.option(ChannelOption.SO_TIMEOUT,SocketConfig.SO_TIMEOUT);
+        this.bootstrap.option(ChannelOption.TCP_NODELAY, true);
+        this.bootstrap.option(ChannelOption.SO_KEEPALIVE, true);
+        this.bootstrap.option(ChannelOption.SO_REUSEADDR, true);
+        this.bootstrap.option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK,
+                1024 * 1024);
+        
+        InetSocketAddress remoteaddress = InetSocketAddress.createUnresolved(this.dbConfig.getHost(), this.dbConfig.getPort());
+        this.bootstrap.remoteAddress(remoteaddress);
+         this.channelPool = new FixedChannelPool(bootstrap, new MySQLChannelPoolHandler(this.factory), this.maxPoolSize);
     }
     
+    private void connect(){
+    	
+    	this.channelPool.acquire();
+    	 
+    }
     
     public boolean isInited() {
         return initialized.get();
     }
-    
-    /**
+      
+    public DatabaseConfig getDbConfig() {
+		return dbConfig;
+	}
+
+	public void setDbConfig(DatabaseConfig dbConfig) {
+		this.dbConfig = dbConfig;
+	}
+
+	/**
      * 
     * @Title: countDown
-    * @Description: 同步pool中所有链接状态
+    * @Description: connection连接成功，同步通知主线程poll
     * @return void    返回类型
     * @throws
      */
     public void countDown() {
         this.latch.countDown();
+    }
+    
+    public static void main(String[] args){
+    	DatabaseConfig dbConfig = new DatabaseConfig();
+    	dbConfig.setHost("127.0.0.1");
+    	dbConfig.setUser("root");
+    	dbConfig.setPassword("youngteam");
+    	MySQLDataPool pool = new MySQLDataPool(dbConfig,20,100);
+    	pool.connect();
     }
 }

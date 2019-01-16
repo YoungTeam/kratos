@@ -16,6 +16,7 @@
 package yt.kratos.net.backend.mysql.handler;
 
 import io.netty.channel.ChannelHandlerAdapter;
+import yt.kratos.net.BaseHandler;
 import yt.kratos.net.backend.mysql.MySQLConnection;
 
 
@@ -35,11 +36,13 @@ public class MySQLInitHandler extends  ChannelHandlerAdapter{
         this.conn = conn;
     }
 
-    public MySQLConnection getSource() {
+    public MySQLConnection getConnection() {
         return this.conn;
     }
 
-    public void setSource(MySQLConnection conn) {
+    public void setConnection(MySQLConnection conn) {
         this.conn = conn;
     }
+
+
 }

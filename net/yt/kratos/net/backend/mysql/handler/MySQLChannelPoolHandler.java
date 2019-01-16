@@ -13,41 +13,59 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package yt.kratos.net.backend.mysql.handler.factory;
+package yt.kratos.net.backend.mysql.handler;
 
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.Channel;
+import io.netty.channel.pool.ChannelPoolHandler;
 import yt.kratos.net.backend.mysql.MySQLConnection;
 import yt.kratos.net.backend.mysql.MySQLConnectionFactory;
-import yt.kratos.net.backend.mysql.handler.MySQLAuthHandler;
-import yt.kratos.net.backend.mysql.handler.MySQLInitHandler;
 import yt.kratos.net.codec.MySQLPacketDecoder;
 
-
-
 /**
- * @ClassName: MySQLHandlerFactory
+ * @ClassName: MySQLChannelPoolHandler
  * @Description: TODO(这里用一句话描述这个类的作用)
  * @author YoungTeam
- * @date 2019年1月15日 下午5:33:38
+ * @date 2019年1月16日 下午5:50:03
  *
  */
-public class MySQLHandlerFactory extends ChannelInitializer<SocketChannel>{
-    private MySQLConnectionFactory factory;
+public class MySQLChannelPoolHandler implements ChannelPoolHandler {
 
-    public MySQLHandlerFactory(MySQLConnectionFactory factory) {
-        this.factory = factory;
-    }
+	MySQLConnectionFactory factory;
+	
+	public MySQLChannelPoolHandler(MySQLConnectionFactory factory){
+		this.factory =factory;
+	}
+	/* 使用完channel需要释放才能放入连接池
+	* @see io.netty.channel.pool.ChannelPoolHandler#channelReleased(io.netty.channel.Channel)
+	*/ 
+	@Override
+	public void channelReleased(Channel ch) throws Exception {
+		// TODO Auto-generated method stub
+		
+	}
 
-    @Override
-    protected void initChannel(SocketChannel ch) throws Exception {
+	/* 获取连接池中的channel
+	* @see io.netty.channel.pool.ChannelPoolHandler#channelAcquired(io.netty.channel.Channel)
+	*/ 
+	@Override
+	public void channelAcquired(Channel ch) throws Exception {
+		// TODO Auto-generated method stub
+		
+	}
+
+	/* 当channel不足时会创建，但不会超过限制的最大channel数
+	* @see io.netty.channel.pool.ChannelPoolHandler#channelCreated(io.netty.channel.Channel)
+	*/ 
+	@Override
+	public void channelCreated(Channel ch) throws Exception {
         MySQLConnection connection = (MySQLConnection)factory.getConnection();
+        //FrontendAuthHandler authHandler = new FrontendAuthHandler(conn);
         MySQLInitHandler initHandler = new MySQLInitHandler(connection);
         MySQLAuthHandler authHandler = new MySQLAuthHandler(connection);
         //BackendTailHandler tailHandler = new BackendTailHandler(connection);*/
         ch.pipeline().addLast(new MySQLPacketDecoder());
         ch.pipeline().addLast(MySQLInitHandler.HANDLER_NAME, initHandler);
         ch.pipeline().addLast(authHandler);
-        //ch.pipeline().addLast(tailHandler);
-    }
+	}
+
 }
