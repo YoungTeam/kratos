@@ -13,23 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package yt.kratos.config;
+package yt.kratos.net.session;
 
 /**
- * @ClassName: Versions
- * @Description: 版本说明
+ * @ClassName: MySQLSession
+ * @Description: TODO(这里用一句话描述这个类的作用)
  * @author YoungTeam
- * @date 2019年1月12日 上午12:37:23
+ * @date 2019年1月17日 下午5:57:52
  *
  */
-public interface Versions {
-    /** 协议版本 */
-    public static byte PROTOCOL_VERSION = 10;
+public class MySQLSession {
 
-    /** 服务器版本 */
-    public static String SERVER_NAME = "Kratos Server";
-    
-    public static String SERVER_VERSION = "1.0.0";
-    
-    public static String AUTHOR = "yangting@sogou-inc.com";
 }

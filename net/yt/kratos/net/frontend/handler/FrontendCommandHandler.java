@@ -22,9 +22,9 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import yt.kratos.config.ErrorCode;
 import yt.kratos.mysql.packet.BinaryPacket;
 import yt.kratos.mysql.packet.MySQLPacket;
+import yt.kratos.mysql.proto.ErrorCode;
 import yt.kratos.net.frontend.FrontendConnection;
 
 
@@ -50,12 +50,12 @@ public class FrontendCommandHandler  extends ChannelInboundHandlerAdapter {
 	        switch (type) {
 	            case MySQLPacket.COM_INIT_DB:
 	                // just init the frontend
-	                //this.conn.initDB(bin);
+	                this.conn.initDB(bin);
 	                break;
 	            case MySQLPacket.COM_QUERY:
 	            	this.conn.query(bin);
 	                break;
-	            case MySQLPacket.COM_PING:
+/*	            case MySQLPacket.COM_PING:
 	                // todo ping , last access time update
 	            	this.conn.ping();
 	                break;
@@ -77,7 +77,7 @@ public class FrontendCommandHandler  extends ChannelInboundHandlerAdapter {
 	                break;
 	            case MySQLPacket.COM_HEARTBEAT:
 	            	this.conn.heartbeat(bin.data);
-	                break;
+	                break;*/
 	            default:
 	            	this.conn.writeErrMessage(ErrorCode.ER_UNKNOWN_COM_ERROR, "Unknown command");
 	                break;

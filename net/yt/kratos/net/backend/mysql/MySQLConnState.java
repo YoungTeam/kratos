@@ -13,23 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package yt.kratos.config;
+package yt.kratos.net.backend.mysql;
 
 /**
- * @ClassName: Versions
- * @Description: 版本说明
+ * @ClassName: MySQLConnState
+ * @Description: 后端连接状态枚举
  * @author YoungTeam
- * @date 2019年1月12日 上午12:37:23
+ * @date 2019年1月17日 下午5:20:43
  *
  */
-public interface Versions {
-    /** 协议版本 */
-    public static byte PROTOCOL_VERSION = 10;
+public interface MySQLConnState {
+    // 后端连接尚未初始化
+    int BACKEND_NOT_AUTHED=0;
+    // 后端连接初始化成功
+    int BACKEND_AUTHED=1;
 
-    /** 服务器版本 */
-    public static String SERVER_NAME = "Kratos Server";
-    
-    public static String SERVER_VERSION = "1.0.0";
-    
-    public static String AUTHOR = "yangting@sogou-inc.com";
+    // must 连续
+    int RESULT_SET_FIELD_COUNT = 2;
+    int RESULT_SET_FIELDS = 3;
+    int RESULT_SET_EOF = 4;
+    int RESULT_SET_ROW = 5;
+    int RESULT_SET_LAST_EOF = 6;
 }

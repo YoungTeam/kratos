@@ -27,12 +27,14 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import yt.kratos.config.SocketConfig;
+import yt.kratos.config.SystemConfig;
 import yt.kratos.mysql.config.DatabaseConfig;
 import yt.kratos.net.backend.mysql.handler.MySQLChannelPoolHandler;
 import yt.kratos.net.backend.mysql.handler.factory.MySQLHandlerFactory;
@@ -82,11 +84,11 @@ public class MySQLDataPool {
         this.idleCount = 0;
         this.backendGroup = new NioEventLoopGroup();
         this.bootstrap = new Bootstrap();
-        //latch = new CountDownLatch(initSize);
+        this.latch = new CountDownLatch(initSize);//初始化链接同步latch
        // lock = new ReentrantLock();
         initialized = new AtomicBoolean(false);
         allocator = new UnpooledByteBufAllocator(false);
-        this.init();
+        //this.init();
     }
     
     public void init(){
@@ -107,13 +109,60 @@ public class MySQLDataPool {
         InetSocketAddress remoteaddress = InetSocketAddress.createUnresolved(this.dbConfig.getHost(), this.dbConfig.getPort());
         this.bootstrap.remoteAddress(remoteaddress);
          this.channelPool = new FixedChannelPool(bootstrap, new MySQLChannelPoolHandler(this.factory), this.maxPoolSize);
+         
+         //初始化连接数         
+         for(int i=0;i<this.initSize;i++){
+        	 this.channelPool.acquire();
+         }
+         
+         try {
+			this.latch.await();
+			logger.info("MySQL Backend connection(count:{}) succed ",this.initSize);
+			this.latch = null; //for gc
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			   logger.error("MySQL Backend connection failed ", e);
+		}
+         
+        this.initIdleCheck();//心跳检测链接状态
+        
     }
     
-    private void connect(){
-    	
-    	this.channelPool.acquire();
-    	 
+    /**
+     * 
+    * @Title: initIdleCheck
+    * @Description: 初始化心跳检测
+    * @return void    返回类型
+    * @throws
+     */
+    private void initIdleCheck(){
+    	  this.backendGroup.scheduleAtFixedRate(new IdleCheckTask(), SystemConfig.IdleCheckInterval, SystemConfig
+         .IdleCheckInterval,TimeUnit.MILLISECONDS);
     }
+
+    /**
+     * IdleCheck
+     */
+    private class IdleCheckTask implements Runnable {
+        public void run() {
+            idleCheck();
+        }
+
+        private void idleCheck() {
+            // 伪代码 类Druid的最小锁时间实现
+            // 在这个地方拿出连接
+            // 心跳command用当前allocate(Unpooled)来分配,防内存泄露
+            // postCommand(HeartBeat)
+            // fireCmd
+            // markInHeartBeat
+            // 在commonHandler中
+            // if(marInHeartBeat) then read okay
+            // then recycle
+            // heartBeat完成,锁只在一处
+            logger.info("we now do idle check");
+        }
+    }    
+    
     
     public boolean isInited() {
         return initialized.get();
@@ -144,6 +193,6 @@ public class MySQLDataPool {
     	dbConfig.setUser("root");
     	dbConfig.setPassword("youngteam");
     	MySQLDataPool pool = new MySQLDataPool(dbConfig,20,100);
-    	pool.connect();
+    	pool.init();
     }
 }

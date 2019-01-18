@@ -13,23 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package yt.kratos.config;
+package yt.kratos.mysql.proto;
 
 /**
- * @ClassName: Versions
- * @Description: 版本说明
+ * @ClassName: Isolations
+ * @Description:  事务隔离级别定义
  * @author YoungTeam
- * @date 2019年1月12日 上午12:37:23
+ * @date 2019年1月14日 下午2:39:29
  *
  */
-public interface Versions {
-    /** 协议版本 */
-    public static byte PROTOCOL_VERSION = 10;
-
-    /** 服务器版本 */
-    public static String SERVER_NAME = "Kratos Server";
-    
-    public static String SERVER_VERSION = "1.0.0";
-    
-    public static String AUTHOR = "yangting@sogou-inc.com";
+public interface Isolations {
+    int READ_UNCOMMITTED = 1;
+    int READ_COMMITTED = 2;
+    int REPEATED_READ = 3;
+    int SERIALIZABLE = 4;
 }

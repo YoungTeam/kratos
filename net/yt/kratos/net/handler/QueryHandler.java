@@ -13,18 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package yt.kratos.config;
+package yt.kratos.net.handler;
 
 /**
- * @ClassName: Isolations
- * @Description:  事务隔离级别定义
+ * @ClassName: FrontendQueryHandler
+ * @Description: 查询处理器
  * @author YoungTeam
- * @date 2019年1月14日 下午2:39:29
+ * @date 2019年1月17日 下午6:09:41
  *
  */
-public interface Isolations {
-    int READ_UNCOMMITTED = 1;
-    int READ_COMMITTED = 2;
-    int REPEATED_READ = 3;
-    int SERIALIZABLE = 4;
+public interface QueryHandler {
+	  void query(String sql);
 }

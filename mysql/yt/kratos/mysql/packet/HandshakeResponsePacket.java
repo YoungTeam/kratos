@@ -17,8 +17,8 @@ package yt.kratos.mysql.packet;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import yt.kratos.config.Capabilities;
 import yt.kratos.mysql.MySQLMsg;
+import yt.kratos.mysql.proto.Capabilities;
 import yt.kratos.util.BufferUtil;
 
 /**

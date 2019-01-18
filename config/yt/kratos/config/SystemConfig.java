@@ -15,6 +15,8 @@
  */
 package yt.kratos.config;
 
+import yt.kratos.mysql.proto.Isolations;
+
 
 /**
  * @ClassName: SystemConfig

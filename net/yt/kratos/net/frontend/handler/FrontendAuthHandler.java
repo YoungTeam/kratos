@@ -23,8 +23,6 @@ import java.security.NoSuchAlgorithmException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import yt.kratos.config.Capabilities;
-import yt.kratos.config.ErrorCode;
 import yt.kratos.config.Versions;
 import yt.kratos.mysql.packet.BinaryPacket;
 import yt.kratos.mysql.packet.HandshakeInitialPacket;
@@ -32,6 +30,8 @@ import yt.kratos.mysql.packet.HandshakeResponsePacket;
 import yt.kratos.mysql.packet.MySQLPacket;
 import yt.kratos.mysql.packet.OKPacket;
 import yt.kratos.mysql.packet.QuitPacket;
+import yt.kratos.mysql.proto.Capabilities;
+import yt.kratos.mysql.proto.ErrorCode;
 import yt.kratos.net.frontend.FrontendConnection;
 import yt.kratos.net.frontend.IdGenerator;
 import yt.kratos.util.CharsetUtil;
@@ -87,7 +87,7 @@ public class FrontendAuthHandler extends ChannelInboundHandlerAdapter{
 	    }
 	   
 	   private boolean checkUser(String user,String host){
-		   return false;
+		   return true;
 	   }
 
 	    protected boolean checkPassword(byte[] password, String user) {
@@ -147,7 +147,7 @@ public class FrontendAuthHandler extends ChannelInboundHandlerAdapter{
             HandshakeInitialPacket hs = new HandshakeInitialPacket();
             hs.packetId = 0;
             hs.protocolVersion = Versions.PROTOCOL_VERSION;
-            hs.serverVersion = Versions.SERVER_VERSION;
+            hs.serverVersion = Versions.SERVER_VERSION.getBytes();
             hs.connectionId = ID_GENERATOR.getId();
             hs.seed = rand1;
             hs.serverCapabilities = getServerCapabilities();

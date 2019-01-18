@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory;
 import yt.kratos.config.SystemConfig;
 import yt.kratos.net.AbstractConnection;
 import yt.kratos.net.ConnectionFactory;
+import yt.kratos.net.frontend.handler.FrontendQueryHandler;
 
 /**
  * @ClassName: FrontendConnectionFactory
@@ -50,7 +51,7 @@ public class FrontendConnectionFactory implements ConnectionFactory{
 	public AbstractConnection getConnection() {
 		 	FrontendConnection connection = new FrontendConnection();
 	        //connection.setDataSource(dataSource);
-	        //connection.setQueryHandler(new ServerQueryHandler(connection));
+	        connection.setQueryHandler(new FrontendQueryHandler(connection));
 	        connection.setId(ACCEPT_SEQ.getAndIncrement());
 	        logger.info("connection Id="+connection.getId());
 	        connection.setCharset(SystemConfig.DEFAULT_CHARSET);

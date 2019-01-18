@@ -15,7 +15,11 @@
  */
 package yt.kratos.mysql.packet;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+
+import java.nio.ByteBuffer;
 
 
 
@@ -180,10 +184,10 @@ public abstract class MySQLPacket {
     public int packetLength;
     public byte packetId;
 
-/*    *//**
+    /**
      * 把数据包写到buffer中，如果buffer满了就把buffer通过前端连接写出。
-     *//*
-    public ByteBuffer write(ByteBuffer buffer, FrontendConnection c) {
+     */
+    public ByteBuffer write(ByteBuffer buffer, Channel c) {
         throw new UnsupportedOperationException();
     }
 
@@ -191,6 +195,10 @@ public abstract class MySQLPacket {
      * 把数据包通过后端连接写出，一般使用buffer机制来提高写的吞吐量。
      */
     public void write(ChannelHandlerContext ctx) {
+        throw new UnsupportedOperationException();
+    }
+    
+    public ByteBuf writeBuf(ByteBuf buffer,ChannelHandlerContext ctx) {
         throw new UnsupportedOperationException();
     }
     

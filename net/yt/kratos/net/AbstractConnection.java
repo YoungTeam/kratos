@@ -30,8 +30,6 @@ import io.netty.channel.ChannelHandlerContext;
  *
  */
 public abstract class AbstractConnection {
-	
-	private static final Logger logger = LoggerFactory.getLogger(AbstractConnection.class);
 	   
 	protected ChannelHandlerContext ctx;
 	protected long id; //connection id
@@ -63,12 +61,6 @@ public abstract class AbstractConnection {
 		this.charsetIndex = charsetIndex;
 	}
 	 
-	
-    public void close() {
-    	  logger.info("close connection:"+this.id);
-        //logger.info("close connection,host:{},port:{}", host, port);
-        //session.close();
-        ctx.close();
-    }
+
 	 
 }

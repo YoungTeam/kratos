@@ -15,11 +15,20 @@
  */
 package yt.kratos.net.frontend;
 
+import io.netty.buffer.ByteBuf;
+
+import java.io.UnsupportedEncodingException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import yt.kratos.mysql.MySQLMsg;
+import yt.kratos.mysql.packet.BinaryPacket;
 import yt.kratos.mysql.packet.ErrorPacket;
+import yt.kratos.mysql.packet.OKPacket;
+import yt.kratos.mysql.proto.ErrorCode;
 import yt.kratos.net.AbstractConnection;
+import yt.kratos.net.handler.QueryHandler;
 import yt.kratos.util.StringUtil;
 
 /**
@@ -30,7 +39,75 @@ import yt.kratos.util.StringUtil;
  *
  */
 public class FrontendConnection extends AbstractConnection{
-	  private static final Logger logger = LoggerFactory.getLogger(FrontendConnection.class);
+	private static final Logger logger = LoggerFactory.getLogger(FrontendConnection.class);
+	
+	
+	protected String schema;
+    protected QueryHandler queryHandler;
+	    
+    public QueryHandler getQueryHandler() {
+		return queryHandler;
+	}
+
+	public void setQueryHandler(QueryHandler queryHandler) {
+		this.queryHandler = queryHandler;
+	}
+
+	// initDB的同时 bind BackendConnecton
+    public void initDB(BinaryPacket bin) {
+        MySQLMsg mm = new MySQLMsg(bin.data);
+        // to skip the packet type
+        mm.position(1);
+        String db = mm.readString();
+
+        // 检查schema是否已经设置
+        if (schema != null) {
+            if (schema.equals(db)) {
+                writeOk();
+            } else {
+                writeErrMessage(ErrorCode.ER_DBACCESS_DENIED_ERROR, "Not allowed to change the database!");
+            }
+            return;
+        }
+        if (db == null) {
+            writeErrMessage(ErrorCode.ER_BAD_DB_ERROR, "Unknown database '" + db + "'");
+            return;
+        } else {
+            this.schema = db;
+            writeOk();
+            return;
+        }
+
+    }	
+    
+    public void query(BinaryPacket bin) {
+        if (queryHandler != null) {
+            // 取得语句
+            MySQLMsg mm = new MySQLMsg(bin.data);
+            mm.position(1);
+            String sql = null;
+            try {
+                sql = mm.readString(charset);
+            } catch (UnsupportedEncodingException e) {
+                writeErrMessage(ErrorCode.ER_UNKNOWN_CHARACTER_SET, "Unknown charset '" + charset + "'");
+                return;
+            }
+            if (sql == null || sql.length() == 0) {
+                writeErrMessage(ErrorCode.ER_NOT_ALLOWED_COMMAND, "Empty SQL");
+                return;
+            }
+
+            // 执行查询
+            queryHandler.query(sql);
+        } else {
+            writeErrMessage(ErrorCode.ER_UNKNOWN_COM_ERROR, "Query unsupported!");
+        }
+    }    
+    
+    public void writeOk() {
+        ByteBuf byteBuf = ctx.alloc().buffer(OKPacket.OK.length).writeBytes(OKPacket.OK);
+        ctx.writeAndFlush(byteBuf);
+    }
 	
     public void writeErrMessage(int errno, String msg) {
         logger.warn(String.format("[FrontendConnection]ErrorNo=%d,ErrorMsg=%s", errno, msg));
@@ -44,8 +121,13 @@ public class FrontendConnection extends AbstractConnection{
         err.message = StringUtil.encodeString(msg, charset);
         err.write(ctx);
     }
-    
-
+    	
+    public void close() {
+    	  logger.info("close connection:"+this.id);
+        //logger.info("close connection,host:{},port:{}", host, port);
+        //session.close();
+        ctx.close();
+    }
     
 
 }

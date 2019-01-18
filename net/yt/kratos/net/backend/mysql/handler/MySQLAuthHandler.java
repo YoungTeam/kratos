@@ -89,10 +89,10 @@ public class MySQLAuthHandler extends ChannelInboundHandlerAdapter{
             default:
                 throw new UnknownPacketException(bin.toString());
         }
-        // to wake up the start up thread
-        //this.co nn.countDown();
+        //同步当前链接以及主线程latch count
+        this.conn.countDown();
         // replace the commandHandler of Authenticator
-        //ctx.pipeline().replace(this, "BackendCommandHandler", new BackendCommandHandler(source));
+        ctx.pipeline().replace(this, "BackendCommandHandler", new BackendCommandHandler(this.conn));
 
     }
 

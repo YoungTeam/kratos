@@ -22,11 +22,12 @@ import java.util.concurrent.CountDownLatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import yt.kratos.config.Capabilities;
 import yt.kratos.exception.UnknownCharsetException;
 import yt.kratos.mysql.packet.HandshakeInitialPacket;
 import yt.kratos.mysql.packet.HandshakeResponsePacket;
+import yt.kratos.mysql.proto.Capabilities;
 import yt.kratos.net.AbstractConnection;
+import yt.kratos.net.backend.BackendConnection;
 import yt.kratos.net.backend.mysql.cmd.Command;
 import yt.kratos.util.CharsetUtil;
 import yt.kratos.util.SecurityUtil;
@@ -38,7 +39,7 @@ import yt.kratos.util.SecurityUtil;
  * @date 2019年1月15日 下午4:04:52
  *
  */
-public class MySQLConnection  extends AbstractConnection{
+public class MySQLConnection  extends BackendConnection{
 	
     private static final Logger logger = LoggerFactory.getLogger(MySQLConnection.class);
     
@@ -71,17 +72,17 @@ public class MySQLConnection  extends AbstractConnection{
     // 当前连接所属的连接池
     public MySQLDataPool mySqlDataPool;
     // 后端连接同步latch
-    //public CountDownLatch syncLatch;
+    public CountDownLatch syncLatch;
     private boolean isAuthenticated;
     // FrontendConnection
     //public FrontendConnection frontend;
     // 当前后端连接堆积的command,通过队列来实现线程间的无锁化
-    //private ConcurrentLinkedQueue<Command> cmdQue;
+    private ConcurrentLinkedQueue<Command> cmdQue;
     
     public MySQLConnection(MySQLDataPool mySqlDataPool){
     	this.mySqlDataPool = mySqlDataPool;
-        //this.syncLatch = new CountDownLatch(1);
-        //this.cmdQue = new ConcurrentLinkedQueue<Command>();
+        this.syncLatch = new CountDownLatch(1);
+        this.cmdQue = new ConcurrentLinkedQueue<Command>();
     }
     
     public boolean isAuthenticated() {
@@ -90,6 +91,39 @@ public class MySQLConnection  extends AbstractConnection{
 
     public void setAuthenticated(boolean isAuthenticated) {
         this.isAuthenticated = isAuthenticated;
+    }
+
+    /**
+     * 
+    * @Title: postCommand
+    * @Description: 插入新的命令到队尾
+    * @return void    返回类型
+    * @throws
+     */
+    public void postCommand(Command command) {
+        cmdQue.offer(command);
+    }
+
+    /**
+     * 
+    * @Title: peekCommand
+    * @Description: 从队列头提取命令但不移除
+    * @return Command    返回类型
+    * @throws
+     */
+    public Command peekCommand() {
+        return cmdQue.peek();
+    }
+
+    /**
+     * 
+    * @Title: pollCommand
+    * @Description: 从队列头提取命令并移除
+    * @return Command    返回类型
+    * @throws
+     */
+    public Command pollCommand() {
+        return cmdQue.poll();
     }
     
     public void authenticate(HandshakeInitialPacket hsi){
@@ -134,13 +168,14 @@ public class MySQLConnection  extends AbstractConnection{
         return SecurityUtil.scramble411(passwd, seed);
     }
     
-/*    public void countDown() {
-    	//等待所有数据库链接初始化状态
+    public void countDown() {
+    	//等待所有数据库链接初始化成功状态
         if (!mySqlDataPool.isInited()) {
             mySqlDataPool.countDown();
         }
+        
         syncLatch.countDown();
         // for gc
         syncLatch = null;
-    }*/
+    }
 }
