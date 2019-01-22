@@ -13,15 +13,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package yt.kratos.net.session;
+package yt.kratos.net.handler;
+
+import java.util.List;
+
+import yt.kratos.mysql.packet.BinaryPacket;
+import yt.kratos.net.route.RouteResultset;
+
 
 /**
- * @ClassName: MySQLSession
+ * @ClassName: ResponseHandler
  * @Description: TODO(这里用一句话描述这个类的作用)
  * @author YoungTeam
- * @date 2019年1月17日 下午5:57:52
+ * @date 2019年1月20日 下午2:48:55
  *
  */
-public class MySQLSession {
+public interface ResponseHandler {
+    // 执行sql
+    void execute(RouteResultset rrs);
 
+    // fieldListResponse
+    void fieldListResponse(List<BinaryPacket> fieldList);
+
+    // errorResponse
+    void errorResponse(BinaryPacket bin);
+
+    // okResponse
+    void okResponse(BinaryPacket bin);
+
+    // rowRespons
+    void rowResponse(BinaryPacket bin);
+
+    // lastEofResponse
+    void lastEofResponse(BinaryPacket bin);
 }

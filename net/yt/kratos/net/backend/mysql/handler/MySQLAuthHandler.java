@@ -92,7 +92,7 @@ public class MySQLAuthHandler extends ChannelInboundHandlerAdapter{
         //同步当前链接以及主线程latch count
         this.conn.countDown();
         // replace the commandHandler of Authenticator
-        ctx.pipeline().replace(this, "BackendCommandHandler", new BackendCommandHandler(this.conn));
+        ctx.pipeline().replace(this, "BackendCommandHandler", new MySQLCommandHandler(this.conn));
 
     }
 

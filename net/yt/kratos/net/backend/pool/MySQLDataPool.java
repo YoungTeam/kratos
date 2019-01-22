@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package yt.kratos.net.backend.mysql;
+package yt.kratos.net.backend.pool;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBufAllocator;
@@ -36,6 +36,7 @@ import org.slf4j.LoggerFactory;
 import yt.kratos.config.SocketConfig;
 import yt.kratos.config.SystemConfig;
 import yt.kratos.mysql.config.DatabaseConfig;
+import yt.kratos.net.backend.mysql.MySQLConnectionFactory;
 import yt.kratos.net.backend.mysql.handler.MySQLChannelPoolHandler;
 import yt.kratos.net.backend.mysql.handler.factory.MySQLHandlerFactory;
 

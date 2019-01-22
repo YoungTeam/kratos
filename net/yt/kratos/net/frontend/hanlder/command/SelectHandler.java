@@ -16,6 +16,7 @@
 package yt.kratos.net.frontend.hanlder.command;
 
 import yt.kratos.net.frontend.FrontendConnection;
+import yt.kratos.net.frontend.response.SelectVersion;
 import yt.kratos.net.frontend.response.SelectVersionComment;
 import yt.kratos.parse.ServerParse;
 import yt.kratos.parse.ServerParseSelect;
@@ -42,7 +43,7 @@ public class SelectHandler {
 	                //SelectUser.response(c);
 	                break;
 	            case ServerParseSelect.VERSION:
-	                //SelectVersion.response(c);
+	                SelectVersion.response(c);
 	                break;
 	            case ServerParseSelect.LAST_INSERT_ID:
 	                offset = ParseUtil.move(stmt, 0, "select".length());
@@ -85,7 +86,7 @@ public class SelectHandler {
 	                //SelectIdentity.response(c, stmt, offset, orgName);
 	                break;
 	            default:
-	                //c.execute(stmt, ServerParse.SELECT);
+	                c.execute(stmt, ServerParse.SELECT);
 	                break;
 	        }
 	    }

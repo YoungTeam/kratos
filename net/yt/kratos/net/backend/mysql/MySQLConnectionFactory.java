@@ -17,6 +17,7 @@ package yt.kratos.net.backend.mysql;
 
 import yt.kratos.net.AbstractConnection;
 import yt.kratos.net.ConnectionFactory;
+import yt.kratos.net.backend.pool.MySQLDataPool;
 
 /**
  * @ClassName: BackendConnectionFactory

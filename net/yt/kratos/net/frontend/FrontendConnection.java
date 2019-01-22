@@ -28,7 +28,9 @@ import yt.kratos.mysql.packet.ErrorPacket;
 import yt.kratos.mysql.packet.OKPacket;
 import yt.kratos.mysql.proto.ErrorCode;
 import yt.kratos.net.AbstractConnection;
+import yt.kratos.net.backend.pool.MySQLDataSource;
 import yt.kratos.net.handler.QueryHandler;
+import yt.kratos.net.session.FrontendSession;
 import yt.kratos.util.StringUtil;
 
 /**
@@ -44,13 +46,27 @@ public class FrontendConnection extends AbstractConnection{
 	
 	protected String schema;
     protected QueryHandler queryHandler;
-	    
+	private FrontendSession session;    
+    private MySQLDataSource dataSrouce;
+	
+    public FrontendConnection(){
+    	  this.session = new FrontendSession(this);
+    }
+    
     public QueryHandler getQueryHandler() {
 		return queryHandler;
 	}
 
 	public void setQueryHandler(QueryHandler queryHandler) {
 		this.queryHandler = queryHandler;
+	}
+
+	public MySQLDataSource getDataSrouce() {
+		return dataSrouce;
+	}
+
+	public void setDataSrouce(MySQLDataSource dataSrouce) {
+		this.dataSrouce = dataSrouce;
 	}
 
 	// initDB的同时 bind BackendConnecton
@@ -79,7 +95,7 @@ public class FrontendConnection extends AbstractConnection{
         }
 
     }	
-    
+        
     public void query(BinaryPacket bin) {
         if (queryHandler != null) {
             // 取得语句
@@ -129,5 +145,12 @@ public class FrontendConnection extends AbstractConnection{
         ctx.close();
     }
     
-
+    public void execute(String sql, int type) {
+        if (schema == null) {
+            writeErrMessage(ErrorCode.ER_NO_DB_ERROR, "No database selected");
+            return;
+        } else {
+            session.execute(sql, type);
+        }
+    }
 }

@@ -23,12 +23,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import yt.kratos.exception.UnknownCharsetException;
+import yt.kratos.mysql.packet.CommandPacket;
 import yt.kratos.mysql.packet.HandshakeInitialPacket;
 import yt.kratos.mysql.packet.HandshakeResponsePacket;
+import yt.kratos.mysql.packet.MySQLPacket;
 import yt.kratos.mysql.proto.Capabilities;
-import yt.kratos.net.AbstractConnection;
+import yt.kratos.mysql.proto.Isolations;
 import yt.kratos.net.backend.BackendConnection;
+import yt.kratos.net.backend.mysql.cmd.CmdPacketEnum;
+import yt.kratos.net.backend.mysql.cmd.CmdType;
 import yt.kratos.net.backend.mysql.cmd.Command;
+import yt.kratos.net.backend.pool.MySQLDataPool;
+import yt.kratos.net.session.Session;
+import yt.kratos.parse.ServerParse;
 import yt.kratos.util.CharsetUtil;
 import yt.kratos.util.SecurityUtil;
 
@@ -69,6 +76,7 @@ public class MySQLConnection  extends BackendConnection{
         // flag |= Capabilities.CLIENT_MULTI_RESULTS;
         return flag;
     }
+    
     // 当前连接所属的连接池
     public MySQLDataPool mySqlDataPool;
     // 后端连接同步latch
@@ -92,6 +100,9 @@ public class MySQLConnection  extends BackendConnection{
     public void setAuthenticated(boolean isAuthenticated) {
         this.isAuthenticated = isAuthenticated;
     }
+    
+
+
 
     /**
      * 
@@ -178,4 +189,122 @@ public class MySQLConnection  extends BackendConnection{
         // for gc
         syncLatch = null;
     }
+
+    
+    
+	/* 设置session，并同步相关状态 
+	* @see yt.kratos.net.backend.BackendConnection#setSession(yt.kratos.net.session.Session)
+	*/ 
+	@Override
+	public void setSession(Session session) {
+		this.session = session;
+		// TODO Auto-generated method stub
+		//sync the charset
+        this.backend.postCommand(getCharsetCommand(charsetIndex));
+        // sync the schema
+        if (schema != null) {
+            backend.postCommand(getUseSchemaCommand(schema));
+        }
+        // sync 事务隔离级别
+        backend.postCommand(getTxIsolationCommand(txIsolation));
+        // sync auto commit状态
+        if (autocommit) {
+            backend.postCommand(getAutoCommitOnCmd());
+        } else {
+            backend.postCommand(getAutoCommitOffCmd());
+        }
+	}
+	
+	
+	   public Command getFrontendCommand(String sql, int type){
+	        CommandPacket packet = new CommandPacket();
+	        packet.packetId = 0;
+	        packet.command = MySQLPacket.COM_QUERY;
+	        packet.arg = sql.getBytes();
+	        Command cmd = new Command(packet, CmdType.FRONTEND_TYPE,type);
+	        return cmd;
+	    }
+
+	    public Command getCommitCommand(){
+	        CommandPacket packet = CmdPacketEnum._COMMIT;
+	        return new Command(packet,CmdType.FRONTEND_TYPE,ServerParse.COMMIT);
+	    }
+
+	    public Command getRollBackCommand(){
+	        CommandPacket packet = CmdPacketEnum._ROLLBACK;
+	        return new Command(packet,CmdType.FRONTEND_TYPE,ServerParse.ROLLBACK);
+	    }
+
+
+
+	    public Command getAutoCommitOnCmd() {
+	        CommandPacket packet = CmdPacketEnum._AUTOCOMMIT_ON;
+	        return new Command(packet, CmdType.BACKEND_TYPE, ServerParse.SET);
+
+	    }
+
+	    public Command getAutoCommitOffCmd() {
+	        CommandPacket packet = CmdPacketEnum._AUTOCOMMIT_OFF;
+	        return  new Command(packet, CmdType.BACKEND_TYPE, ServerParse.SET);
+	    }
+
+
+	    public Command getBackendCommand(CommandPacket packet, int sqlType) {
+	        Command command = new Command();
+	        command.setCmdPacket(packet);
+	        command.setSqlType(sqlType);
+	        command.setType(CmdType.BACKEND_TYPE);
+	        return command;
+	    }
+
+	    public Command getTxIsolationCommand(int txIsolation) {
+	        CommandPacket packet = getTxIsolationPacket(txIsolation);
+	        return getBackendCommand(packet, ServerParse.SET);
+	    }
+
+	    public Command getCharsetCommand(int ci) {
+	        CommandPacket packet = getCharsetPacket(ci);
+	        return getBackendCommand(packet, ServerParse.SET);
+	    }
+
+	    public Command getUseSchemaCommand(String schema) {
+	        CommandPacket packet = getUseSchemaPacket(schema);
+	        return getBackendCommand(packet, ServerParse.USE);
+	    }
+
+	    private CommandPacket getUseSchemaPacket(String schema) {
+	        StringBuilder s = new StringBuilder();
+	        s.append("USE ").append(schema);
+	        CommandPacket cmd = new CommandPacket();
+	        cmd.packetId = 0;
+	        cmd.command = MySQLPacket.COM_QUERY;
+	        cmd.arg = s.toString().getBytes();
+	        return cmd;
+	    }
+
+	    private CommandPacket getCharsetPacket(int ci) {
+	        String charset = CharsetUtil.getCharset(ci);
+	        StringBuilder s = new StringBuilder();
+	        s.append("SET names ").append(charset);
+	        CommandPacket cmd = new CommandPacket();
+	        cmd.packetId = 0;
+	        cmd.command = MySQLPacket.COM_QUERY;
+	        cmd.arg = s.toString().getBytes();
+	        return cmd;
+	    }
+
+	    private CommandPacket getTxIsolationPacket(int txIsolation) {
+	        switch (txIsolation) {
+	            case Isolations.READ_UNCOMMITTED:
+	                return CmdPacketEnum._READ_UNCOMMITTED;
+	            case Isolations.READ_COMMITTED:
+	                return CmdPacketEnum._READ_COMMITTED;
+	            case Isolations.REPEATED_READ:
+	                return CmdPacketEnum._REPEATED_READ;
+	            case Isolations.SERIALIZABLE:
+	                return CmdPacketEnum._SERIALIZABLE;
+	            default:
+	                throw new UnknownTxIsolationException("txIsolation:" + txIsolation);
+	        }
+	    }	
 }

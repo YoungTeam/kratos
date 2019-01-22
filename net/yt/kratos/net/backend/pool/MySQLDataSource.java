@@ -13,26 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package yt.kratos.net.backend;
+package yt.kratos.net.backend.pool;
 
-import yt.kratos.net.AbstractConnection;
-import yt.kratos.net.session.Session;
+import yt.kratos.net.backend.BackendConnection;
+
 
 /**
- * @ClassName: BackendConnection
+ * @ClassName: MySQLDataSource
  * @Description: TODO(这里用一句话描述这个类的作用)
  * @author YoungTeam
- * @date 2019年1月17日 下午5:46:06
+ * @date 2019年1月21日 下午5:02:35
  *
  */
-public abstract class BackendConnection extends AbstractConnection{
-    
-    protected Session session;
+public class MySQLDataSource {
+    private MySQLDataPool dataPool;
 
-	public Session getSession() {
-		return session;
-	}
+    public MySQLDataSource(MySQLDataPool dataPool) {
+        this.dataPool = dataPool;
+    }
 
-	public  abstract void setSession(Session session);
-	
+    public BackendConnection getBackend() {
+        //return dataPool.getBackend();
+    	return null;
+    }
+
+    public void recycle(BackendConnection backend){
+        //dataPool.putBackend(backend);
+    }
 }
