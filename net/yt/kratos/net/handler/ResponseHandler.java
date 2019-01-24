@@ -15,6 +15,7 @@
  */
 package yt.kratos.net.handler;
 
+import java.io.UnsupportedEncodingException;
 import java.util.List;
 
 import yt.kratos.mysql.packet.BinaryPacket;
@@ -30,7 +31,7 @@ import yt.kratos.net.route.RouteResultset;
  */
 public interface ResponseHandler {
     // 执行sql
-    void execute(RouteResultset rrs);
+    void execute(RouteResultset rrs) throws UnsupportedEncodingException;
 
     // fieldListResponse
     void fieldListResponse(List<BinaryPacket> fieldList);

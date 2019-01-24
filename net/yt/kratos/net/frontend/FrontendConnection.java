@@ -22,13 +22,13 @@ import java.io.UnsupportedEncodingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import yt.kratos.mysql.MySQLDataSource;
 import yt.kratos.mysql.MySQLMsg;
 import yt.kratos.mysql.packet.BinaryPacket;
 import yt.kratos.mysql.packet.ErrorPacket;
 import yt.kratos.mysql.packet.OKPacket;
 import yt.kratos.mysql.proto.ErrorCode;
 import yt.kratos.net.AbstractConnection;
-import yt.kratos.net.backend.pool.MySQLDataSource;
 import yt.kratos.net.handler.QueryHandler;
 import yt.kratos.net.session.FrontendSession;
 import yt.kratos.util.StringUtil;
@@ -47,13 +47,20 @@ public class FrontendConnection extends AbstractConnection{
 	protected String schema;
     protected QueryHandler queryHandler;
 	private FrontendSession session;    
-    private MySQLDataSource dataSrouce;
 	
     public FrontendConnection(){
     	  this.session = new FrontendSession(this);
     }
     
-    public QueryHandler getQueryHandler() {
+    public String getSchema() {
+		return schema;
+	}
+
+	public void setSchema(String schema) {
+		this.schema = schema;
+	}
+
+	public QueryHandler getQueryHandler() {
 		return queryHandler;
 	}
 
@@ -61,13 +68,7 @@ public class FrontendConnection extends AbstractConnection{
 		this.queryHandler = queryHandler;
 	}
 
-	public MySQLDataSource getDataSrouce() {
-		return dataSrouce;
-	}
 
-	public void setDataSrouce(MySQLDataSource dataSrouce) {
-		this.dataSrouce = dataSrouce;
-	}
 
 	// initDB的同时 bind BackendConnecton
     public void initDB(BinaryPacket bin) {

@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 import yt.kratos.mysql.proto.ErrorCode;
 import yt.kratos.net.frontend.FrontendConnection;
 import yt.kratos.net.frontend.hanlder.command.SelectHandler;
+import yt.kratos.net.frontend.hanlder.command.UseHandler;
 import yt.kratos.net.handler.QueryHandler;
 import yt.kratos.parse.ServerParse;
 
@@ -81,7 +82,7 @@ public class FrontendQueryHandler implements QueryHandler{
             c.writeErrMessage(ErrorCode.ER_UNKNOWN_COM_ERROR, "Unsupported command");
             break;
         case ServerParse.USE:
-            //UseHandler.handle(sql, c, rs >>> 8);
+            UseHandler.handle(sql, c, rs >>> 8);
             break;
         case ServerParse.COMMIT:
             //c.commit();

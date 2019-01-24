@@ -13,13 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package yt.kratos.net.handler.node;
+package yt.kratos.net.backend.mysql.handler.node;
 
+import java.io.UnsupportedEncodingException;
 import java.util.List;
 
 import yt.kratos.mysql.packet.BinaryPacket;
-import yt.kratos.net.backend.BackendConnection;
+import yt.kratos.mysql.packet.CommandPacket;
+import yt.kratos.mysql.packet.MySQLPacket;
 import yt.kratos.net.backend.mysql.MySQLConnection;
+import yt.kratos.net.backend.mysql.cmd.CmdType;
+import yt.kratos.net.backend.mysql.cmd.Command;
 import yt.kratos.net.handler.ResponseHandler;
 import yt.kratos.net.route.RouteResultset;
 import yt.kratos.net.route.RouteResultsetNode;
@@ -43,7 +47,7 @@ public class MySQLNodeHandler implements ResponseHandler{
 	* @see yt.kratos.net.handler.ResponseHandler#execute(yt.kratos.net.handler.RouteResultset)
 	*/ 
 	@Override
-	public void execute(RouteResultset rrs) {
+	public void execute(RouteResultset rrs) throws UnsupportedEncodingException{
 		// TODO Auto-generated method stub
 /*	     if (rrs.getNodes() == null || rrs.getNodes().length == 0) {
 	            session.writeErrMessage(ErrorCode.ERR_SINGLE_EXECUTE_NODES, "SingleNode executes no nodes");
@@ -54,11 +58,18 @@ public class MySQLNodeHandler implements ResponseHandler{
 	            return;
 	        }*/
 	        // 当前RouteResultset对应的Backend
-	        BackendConnection backend = getBackend(rrs);
-	        RouteResultsetNode node = rrs.getNodes()[0];
+	        MySQLConnection backend = this.getMySQLConnection(rrs);
 	        
+	        
+	        RouteResultsetNode node = rrs.getNode();
+            CommandPacket packet = new CommandPacket();
+            packet.packetId = 0;
+            packet.command = MySQLPacket.COM_QUERY;
+            packet.arg = node.getStatement().getBytes(this.session.getConnection().getCharset());
+            Command cmd = new Command(packet, CmdType.FRONTEND_TYPE,node.getSqlType());
+       
 	       // Command command = session.getConnection().get.getSource().getFrontendCommand(node.getStatement(), node.getSqlType());
-	        backend.postCommand(command);
+	        backend.postCommand(cmd);
 	        // fire it
 	        backend.fireCmd();
 	}
@@ -78,7 +89,10 @@ public class MySQLNodeHandler implements ResponseHandler{
 	@Override
 	public void errorResponse(BinaryPacket bin) {
 		// TODO Auto-generated method stub
-		
+        bin.write(session.getConnection().getCtx());
+        /*if (session.getConnection().isAutocommit()) {
+            session.release();
+        }*/
 	}
 
 	/* 
@@ -110,7 +124,7 @@ public class MySQLNodeHandler implements ResponseHandler{
 
 	
     private MySQLConnection getMySQLConnection(RouteResultset rrs) {
-        return session.getTarget(rrs.getNode());
+        return (MySQLConnection)session.getBackendConnection(rrs.getNode());
     }
 
 

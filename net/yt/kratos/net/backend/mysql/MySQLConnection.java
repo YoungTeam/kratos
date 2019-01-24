@@ -23,17 +23,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import yt.kratos.exception.UnknownCharsetException;
+import yt.kratos.exception.UnknownTxIsolationException;
 import yt.kratos.mysql.packet.CommandPacket;
 import yt.kratos.mysql.packet.HandshakeInitialPacket;
 import yt.kratos.mysql.packet.HandshakeResponsePacket;
 import yt.kratos.mysql.packet.MySQLPacket;
+import yt.kratos.mysql.pool.MySQLConnectionPool;
 import yt.kratos.mysql.proto.Capabilities;
 import yt.kratos.mysql.proto.Isolations;
 import yt.kratos.net.backend.BackendConnection;
 import yt.kratos.net.backend.mysql.cmd.CmdPacketEnum;
 import yt.kratos.net.backend.mysql.cmd.CmdType;
 import yt.kratos.net.backend.mysql.cmd.Command;
-import yt.kratos.net.backend.pool.MySQLDataPool;
 import yt.kratos.net.session.Session;
 import yt.kratos.parse.ServerParse;
 import yt.kratos.util.CharsetUtil;
@@ -78,7 +79,7 @@ public class MySQLConnection  extends BackendConnection{
     }
     
     // 当前连接所属的连接池
-    public MySQLDataPool mySqlDataPool;
+    public MySQLConnectionPool mySqlDataPool;
     // 后端连接同步latch
     public CountDownLatch syncLatch;
     private boolean isAuthenticated;
@@ -87,7 +88,7 @@ public class MySQLConnection  extends BackendConnection{
     // 当前后端连接堆积的command,通过队列来实现线程间的无锁化
     private ConcurrentLinkedQueue<Command> cmdQue;
     
-    public MySQLConnection(MySQLDataPool mySqlDataPool){
+    public MySQLConnection(MySQLConnectionPool mySqlDataPool){
     	this.mySqlDataPool = mySqlDataPool;
         this.syncLatch = new CountDownLatch(1);
         this.cmdQue = new ConcurrentLinkedQueue<Command>();
@@ -137,6 +138,13 @@ public class MySQLConnection  extends BackendConnection{
         return cmdQue.poll();
     }
     
+    public void fireCmd() {
+        Command command = peekCommand();
+        if (command != null) {
+            ctx.writeAndFlush(command.getCmdByteBuf(ctx));
+        }
+    }
+    
     public void authenticate(HandshakeInitialPacket hsi){
     	  this.id = hsi.connectionId;
           int ci = hsi.serverCharsetIndex & 0xff;//获取服务器字符集
@@ -152,17 +160,17 @@ public class MySQLConnection  extends BackendConnection{
 			hsp.maxPacketSize = MAX_PACKET_SIZE;
 			hsp.charsetIndex = this.charsetIndex;
 			  // todo config
-			hsp.user = this.mySqlDataPool.getDbConfig().getUser();
+			hsp.user = this.mySqlDataPool.getDbSource().getUser();
 			//ap.user = SystemConfig.UserName;
-			String passwd = this.mySqlDataPool.getDbConfig().getPassword();
+			String passwd = this.mySqlDataPool.getDbSource().getPassword();
 			try {
 				hsp.password = passwd(passwd,hsi);
 			} catch (NoSuchAlgorithmException e) {
 					logger.error("auth packet errorMessage", e);
 					throw new RuntimeException(e.getMessage());
 			}
-			// todo config
-			hsp.database = "";
+			//初始化database
+			hsp.database =  this.mySqlDataPool.getDbSource().getDatabase();
 			hsp.write(ctx);
     }
     
@@ -199,20 +207,20 @@ public class MySQLConnection  extends BackendConnection{
 	public void setSession(Session session) {
 		this.session = session;
 		// TODO Auto-generated method stub
-		//sync the charset
-        this.backend.postCommand(getCharsetCommand(charsetIndex));
+/*		//sync the charset
+        this.postCommand(getCharsetCommand(charsetIndex));
         // sync the schema
         if (schema != null) {
-            backend.postCommand(getUseSchemaCommand(schema));
+            this.postCommand(getUseSchemaCommand(schema));
         }
         // sync 事务隔离级别
-        backend.postCommand(getTxIsolationCommand(txIsolation));
+        this.postCommand(getTxIsolationCommand(txIsolation));
         // sync auto commit状态
         if (autocommit) {
-            backend.postCommand(getAutoCommitOnCmd());
+            this.postCommand(getAutoCommitOnCmd());
         } else {
-            backend.postCommand(getAutoCommitOffCmd());
-        }
+            this.postCommand(getAutoCommitOffCmd());
+        }*/
 	}
 	
 	

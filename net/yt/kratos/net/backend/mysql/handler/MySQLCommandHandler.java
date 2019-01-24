@@ -17,13 +17,19 @@ package yt.kratos.net.backend.mysql.handler;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import yt.kratos.mysql.packet.BinaryPacket;
+import yt.kratos.mysql.packet.EOFPacket;
 import yt.kratos.mysql.packet.ErrorPacket;
-import yt.kratos.mysql.packet.MySQLPacket;
 import yt.kratos.net.backend.mysql.MySQLConnState;
 import yt.kratos.net.backend.mysql.MySQLConnection;
 import yt.kratos.net.backend.mysql.cmd.CmdType;
 import yt.kratos.net.backend.mysql.cmd.Command;
+import yt.kratos.net.handler.ResponseHandler;
+import yt.kratos.net.session.FrontendSession;
 import yt.kratos.parse.ServerParse;
 
 /**
@@ -34,6 +40,9 @@ import yt.kratos.parse.ServerParse;
  *
  */
 public class MySQLCommandHandler   extends ChannelInboundHandlerAdapter{
+	
+    private static final Logger logger = LoggerFactory.getLogger(MySQLCommandHandler.class);
+    
 	private MySQLConnection conn;
     // 是否在select
     private volatile boolean selecting;
@@ -51,7 +60,7 @@ public class MySQLCommandHandler   extends ChannelInboundHandlerAdapter{
         BinaryPacket bin = (BinaryPacket) msg;
         if (processCmd(ctx, bin)) {
             // fire the next cmd
-            //conn.fireCmd();
+            this.conn.fireCmd();
         }
     }
     
@@ -71,12 +80,21 @@ public class MySQLCommandHandler   extends ChannelInboundHandlerAdapter{
         }
         // if handle successful , the command can be remove
         if (handleResponse(bin, cmd.getType())) {
-            source.pollCommand();
+        	this.conn.pollCommand();
             return true;
         } else {
             return false;
         }
     }    
+    
+    private boolean handleResponse(BinaryPacket bin, CmdType cmdType) {
+        if (selecting) {
+            return handleResultSet(bin, cmdType);
+        } else {
+           // return handleNormalResult(bin, cmdType);
+        	return handleResultSet(bin, cmdType);
+        }
+    }
     
     private boolean handleResultSet(BinaryPacket bin, CmdType cmdType) {
         boolean result = false;
@@ -84,7 +102,7 @@ public class MySQLCommandHandler   extends ChannelInboundHandlerAdapter{
         switch (type) {
             case ErrorPacket.FIELD_COUNT:
                 // 重置状态,且告诉上层当前select已经处理完毕
-                resetSelect();
+                //resetSelect();
                 result = true;
                 ErrorPacket err = new ErrorPacket();
                 err.read(bin);
@@ -94,7 +112,7 @@ public class MySQLCommandHandler   extends ChannelInboundHandlerAdapter{
                 break;
             case EOFPacket.FIELD_COUNT:
                 EOFPacket eof = new EOFPacket();
-                eof.read(bin);
+                /*eof.read(bin);
                 if (selectState == MySQLConnState.RESULT_SET_FIELDS) {
                     // logger.info("eof");
                     // 推进状态 需要步进两次状态,先到field_eof,再到row
@@ -113,16 +131,16 @@ public class MySQLCommandHandler   extends ChannelInboundHandlerAdapter{
                         result = true;
                     }
                     getResponseHandler().lastEofResponse(bin);
-                }
+                }*/
                 break;
             default:
                 switch (selectState) {
                     case MySQLConnState.RESULT_SET_FIELD_COUNT:
-                        selectStateStep();
-                        addToFieldList(bin);
+                        //selectStateStep();
+                        //addToFieldList(bin);
                         break;
                     case MySQLConnState.RESULT_SET_FIELDS:
-                        addToFieldList(bin);
+                        //addToFieldList(bin);
                         break;
                     case MySQLConnState.RESULT_SET_ROW:
                         getResponseHandler().rowResponse(bin);
@@ -132,4 +150,8 @@ public class MySQLCommandHandler   extends ChannelInboundHandlerAdapter{
         return result;
     }    
     
+    private ResponseHandler getResponseHandler() {
+        FrontendSession session = (FrontendSession)this.conn.getSession();
+        return session.getResponseHandler();
+    }
 }

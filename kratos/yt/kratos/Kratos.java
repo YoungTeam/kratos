@@ -15,6 +15,8 @@
  */
 package yt.kratos;
 
+import yt.kratos.config.datasource.DataSourceConfig;
+
 /**
  * @ClassName: Kratos
  * @Description: Kratos全局配置类
@@ -25,5 +27,10 @@ package yt.kratos;
 public class Kratos {
 	public static int SERVER_PORT = 1506;
 	
+	
+	public static DataSourceConfig DataSource(){
+		return DataSourceConfig.me;
+		//return DataSourceConfig();
+	}
 
 }

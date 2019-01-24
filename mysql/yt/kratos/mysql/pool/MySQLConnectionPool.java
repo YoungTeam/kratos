@@ -13,20 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package yt.kratos.net.backend.pool;
+package yt.kratos.mysql.pool;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.pool.FixedChannelPool;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.util.concurrent.Future;
 
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -35,9 +40,12 @@ import org.slf4j.LoggerFactory;
 
 import yt.kratos.config.SocketConfig;
 import yt.kratos.config.SystemConfig;
+import yt.kratos.mysql.MySQLDataSource;
 import yt.kratos.mysql.config.DatabaseConfig;
+import yt.kratos.net.backend.mysql.MySQLConnection;
 import yt.kratos.net.backend.mysql.MySQLConnectionFactory;
 import yt.kratos.net.backend.mysql.handler.MySQLChannelPoolHandler;
+import yt.kratos.net.backend.mysql.handler.MySQLInitHandler;
 import yt.kratos.net.backend.mysql.handler.factory.MySQLHandlerFactory;
 
 
@@ -49,10 +57,10 @@ import yt.kratos.net.backend.mysql.handler.factory.MySQLHandlerFactory;
  * @date 2019年1月15日 下午5:18:41
  *
  */
-public class MySQLDataPool {
-	private static final Logger logger = LoggerFactory.getLogger(MySQLDataPool.class);
+public class MySQLConnectionPool {
+	private static final Logger logger = LoggerFactory.getLogger(MySQLConnectionPool.class);
 
-	private DatabaseConfig dbConfig;
+	private MySQLDataSource dbSource;
     // 当前连接池中空闲的连接数
     private int idleCount;
     // 最大连接数
@@ -69,6 +77,10 @@ public class MySQLDataPool {
     private Bootstrap bootstrap;
     // Backend Connection Factory
     private MySQLConnectionFactory factory;
+    
+    // 连接池
+    private final MySQLConnection[] conns;
+    
     // 线程间同步的闩锁
     private CountDownLatch latch;
     // get/put的锁
@@ -78,11 +90,12 @@ public class MySQLDataPool {
     // data pool的command allocator
     private ByteBufAllocator allocator;
     
-    public MySQLDataPool(DatabaseConfig dbConfig,int initSize, int maxPoolSize) {
-    	this.dbConfig = dbConfig;
+    public MySQLConnectionPool(MySQLDataSource dbSource,int initSize, int maxPoolSize) {
+    	this.dbSource = dbSource;
         this.maxPoolSize = maxPoolSize;
         this.initSize = initSize;
         this.idleCount = 0;
+        this.conns = new MySQLConnection[this.maxPoolSize];
         this.backendGroup = new NioEventLoopGroup();
         this.bootstrap = new Bootstrap();
         this.latch = new CountDownLatch(initSize);//初始化链接同步latch
@@ -107,25 +120,36 @@ public class MySQLDataPool {
         this.bootstrap.option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK,
                 1024 * 1024);
         
-        InetSocketAddress remoteaddress = InetSocketAddress.createUnresolved(this.dbConfig.getHost(), this.dbConfig.getPort());
+        InetSocketAddress remoteaddress = InetSocketAddress.createUnresolved(this.dbSource.getHost(), this.dbSource.getPort());
         this.bootstrap.remoteAddress(remoteaddress);
-         this.channelPool = new FixedChannelPool(bootstrap, new MySQLChannelPoolHandler(this.factory), this.maxPoolSize);
+        this.channelPool = new FixedChannelPool(bootstrap, new MySQLChannelPoolHandler(this.factory), this.maxPoolSize);
          
-         //初始化连接数         
+         //初始化连接数 
+        List<Future<Channel>> futureList = new ArrayList<Future<Channel>>();
          for(int i=0;i<this.initSize;i++){
-        	 this.channelPool.acquire();
+        	 futureList.add(this.channelPool.acquire());
          }
          
          try {
 			this.latch.await();
-			logger.info("MySQL Backend connection(count:{}) succed ",this.initSize);
+			logger.info("MySQL Backend connection(count:{}) succed ",this.channelPool.acquiredChannelCount());
 			this.latch = null; //for gc
-		} catch (InterruptedException e) {
+			
+			//初始化connections
+			int i =0;
+			for(Future<Channel> fch:futureList){
+				Channel ch = fch.get();//.get(500, TimeUnit.SECONDS);
+				MySQLInitHandler initHandler = (MySQLInitHandler)ch.pipeline().get(MySQLInitHandler.HANDLER_NAME);
+				this.conns[i] = initHandler.getConnection();
+				i++;
+			}
+			
+		} catch (InterruptedException | ExecutionException e) {
 			// TODO Auto-generated catch block
 			   logger.error("MySQL Backend connection failed ", e);
 		}
          
-        this.initIdleCheck();//心跳检测链接状态
+        //this.initIdleCheck();//心跳检测链接状态
         
     }
     
@@ -169,14 +193,40 @@ public class MySQLDataPool {
         return initialized.get();
     }
       
-    public DatabaseConfig getDbConfig() {
-		return dbConfig;
+    public MySQLDataSource getDbSource() {
+		return dbSource;
 	}
 
-	public void setDbConfig(DatabaseConfig dbConfig) {
-		this.dbConfig = dbConfig;
+	public void setDbSource(MySQLDataSource dbSource) {
+		this.dbSource = dbSource;
 	}
 
+	/**
+	 * 
+	* @Title: getBackendConnection
+	* @Description: 同步获取数据库连接
+	* @return void    返回类型
+	* @throws
+	 */
+	public MySQLConnection getBackendConnection(){
+		
+		for(MySQLConnection conn : this.conns){
+			if(conn!=null)
+				return conn;
+		}
+/*		Future<Channel> fch = this.channelPool.acquire();
+		try {
+			Channel ch = fch.get();//.get(500, TimeUnit.SECONDS);
+			MySQLInitHandler initHandler = (MySQLInitHandler)ch.pipeline().get(MySQLInitHandler.HANDLER_NAME);
+			return initHandler.getConnection();
+		} catch (InterruptedException | ExecutionException e) {
+			// TODO Auto-generated catch block
+			logger.error("Get MySQLConnection Fail",e);
+		}*/
+		
+		return null;
+	}
+	
 	/**
      * 
     * @Title: countDown
@@ -189,11 +239,12 @@ public class MySQLDataPool {
     }
     
     public static void main(String[] args){
-    	DatabaseConfig dbConfig = new DatabaseConfig();
-    	dbConfig.setHost("127.0.0.1");
-    	dbConfig.setUser("root");
-    	dbConfig.setPassword("youngteam");
-    	MySQLDataPool pool = new MySQLDataPool(dbConfig,20,100);
+    	MySQLDataSource dbSource = new MySQLDataSource("aa");
+    	dbSource.setHost("127.0.0.1");
+    	dbSource.setUser("root");
+    	dbSource.setPassword("youngteam");
+    	MySQLConnectionPool pool = new MySQLConnectionPool(dbSource,20,100);
     	pool.init();
+    	
     }
 }

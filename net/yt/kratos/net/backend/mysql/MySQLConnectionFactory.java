@@ -15,9 +15,9 @@
  */
 package yt.kratos.net.backend.mysql;
 
+import yt.kratos.mysql.pool.MySQLConnectionPool;
 import yt.kratos.net.AbstractConnection;
 import yt.kratos.net.ConnectionFactory;
-import yt.kratos.net.backend.pool.MySQLDataPool;
 
 /**
  * @ClassName: BackendConnectionFactory
@@ -28,9 +28,9 @@ import yt.kratos.net.backend.pool.MySQLDataPool;
  */
 public class MySQLConnectionFactory  implements ConnectionFactory{
 
-	private MySQLDataPool mySqlDataPool;
+	private MySQLConnectionPool mySqlDataPool;
 	
-	public MySQLConnectionFactory(MySQLDataPool mySqlDataPool){
+	public MySQLConnectionFactory(MySQLConnectionPool mySqlDataPool){
 		this.mySqlDataPool = mySqlDataPool;
 	}
 	

@@ -22,6 +22,23 @@ package yt.kratos.net.backend.mysql.cmd;
  * @date 2019年1月15日 下午4:56:06
  *
  */
-public class CmdType {
+public enum CmdType {
+	 // 前端连接发起的命令
+    FRONTEND_TYPE("0"),
+    // 后端发起的命令
+    BACKEND_TYPE("1");
 
+    private String code;
+
+    CmdType(String code) {
+        this.code = code;
+    }
+
+    public String getCode() {
+        return code;
+    }
+
+    public void setCode(String code) {
+        this.code = code;
+    }
 }

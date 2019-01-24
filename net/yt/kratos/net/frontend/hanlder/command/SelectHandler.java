@@ -16,6 +16,7 @@
 package yt.kratos.net.frontend.hanlder.command;
 
 import yt.kratos.net.frontend.FrontendConnection;
+import yt.kratos.net.frontend.response.SelectDatabase;
 import yt.kratos.net.frontend.response.SelectVersion;
 import yt.kratos.net.frontend.response.SelectVersionComment;
 import yt.kratos.parse.ServerParse;
@@ -37,7 +38,7 @@ public class SelectHandler {
 	                SelectVersionComment.response(c);
 	                break;
 	            case ServerParseSelect.DATABASE:
-	                //SelectDatabase.response(c);
+	                SelectDatabase.response(c);
 	                break;
 	            case ServerParseSelect.USER:
 	                //SelectUser.response(c);

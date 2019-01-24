@@ -13,31 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package yt.kratos.net.backend.pool;
-
-import yt.kratos.net.backend.BackendConnection;
-
+package yt.kratos.config.datasource;
 
 /**
- * @ClassName: MySQLDataSource
+ * @ClassName: DataSource
  * @Description: TODO(这里用一句话描述这个类的作用)
  * @author YoungTeam
- * @date 2019年1月21日 下午5:02:35
+ * @date 2019年1月24日 下午5:12:49
  *
  */
-public class MySQLDataSource {
-    private MySQLDataPool dataPool;
+public abstract  class DataSource {
 
-    public MySQLDataSource(MySQLDataPool dataPool) {
-        this.dataPool = dataPool;
-    }
+		protected String schema;
 
-    public BackendConnection getBackend() {
-        //return dataPool.getBackend();
-    	return null;
-    }
+		protected DataSource(String schema){
+			this.schema = schema;
+		}
+		
+		public String getSchema() {
+			return schema;
+		}
 
-    public void recycle(BackendConnection backend){
-        //dataPool.putBackend(backend);
-    }
+		public void setSchema(String schema) {
+			this.schema = schema;
+		}
+		
 }

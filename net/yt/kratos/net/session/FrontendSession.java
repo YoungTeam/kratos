@@ -15,14 +15,15 @@
  */
 package yt.kratos.net.session;
 
+import java.io.UnsupportedEncodingException;
 import java.util.concurrent.ConcurrentHashMap;
 
-import alchemystar.lancelot.common.net.handler.backend.pool.MySqlDataSource;
+import yt.kratos.Kratos;
 import yt.kratos.mysql.proto.ErrorCode;
 import yt.kratos.net.backend.BackendConnection;
+import yt.kratos.net.backend.mysql.handler.node.MySQLNodeHandler;
 import yt.kratos.net.frontend.FrontendConnection;
 import yt.kratos.net.handler.ResponseHandler;
-import yt.kratos.net.handler.node.MySQLNodeHandler;
 import yt.kratos.net.route.RouteResultset;
 import yt.kratos.net.route.RouteResultsetNode;
 
@@ -34,8 +35,6 @@ import yt.kratos.net.route.RouteResultsetNode;
  *
  */
 public class FrontendSession implements Session{
-	
-	private MySqlDataSource dataSource;
 	  
     // 事务是否被打断
     private volatile boolean txInterrupted;
@@ -46,7 +45,8 @@ public class FrontendSession implements Session{
 	
 	private ResponseHandler responseHandler;
 	
-	 private final ConcurrentHashMap<RouteResultsetNode, BackendConnection> target;
+	//路由与后端链接map
+	private final ConcurrentHashMap<RouteResultsetNode, BackendConnection> target;
 	
 	public FrontendSession(FrontendConnection conn){
 		this.conn = conn;
@@ -79,8 +79,13 @@ public class FrontendSession implements Session{
             return;
         }
         
-        RouteResultset rrs = route(sql, type);
-        this.responseHandler.execute(rrs);
+        RouteResultset rrs = route(this.conn.getSchema(),sql, type);
+        try {
+			this.responseHandler.execute(rrs);
+		} catch (UnsupportedEncodingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
         
         
        // this.responseHandler.execute(rrs);
@@ -98,7 +103,7 @@ public class FrontendSession implements Session{
         }*/
     }
 	
-    private RouteResultset route(String sql, int type) {
+    private RouteResultset route(String schema,String sql, int type) {
         RouteResultset routeResultset = null;//LancelotStmtParser.parser(sql,type);
         if(routeResultset == null){
             routeResultset = new RouteResultset();
@@ -112,38 +117,13 @@ public class FrontendSession implements Session{
     public BackendConnection getBackendConnection(RouteResultsetNode key) {
         BackendConnection backend = target.get(key);
         if (backend == null) {
-            backend = this.conn.getDataSrouce().getBackend();
+            backend = Kratos.DataSource().get(this.conn.getSchema()).getDataPool().getBackendConnection();//  this.conn.getDataSource().getDataPool().getBackendConnection();
+            backend.setSession(this);//后端链接绑定Session
             target.put(key, backend);
         }
         return backend;
     }    
-    
-    
-    /**
-     * 获取已经状态同步过的backend
-     * todo 优化,减少发送请求的数量
-     * @return
-     */
-    public BackendConnection getStateSyncBackend() {
-        BackendConnection backend = this.getConnection().getDataSrouce().getBackend();
-        backend.setSession(this);//后端链接绑定Session
-        
-        //sync the charset
-        backend.postCommand(getCharsetCommand(charsetIndex));
-        // sync the schema
-        if (schema != null) {
-            backend.postCommand(getUseSchemaCommand(schema));
-        }
-        // sync 事务隔离级别
-        backend.postCommand(getTxIsolationCommand(txIsolation));
-        // sync auto commit状态
-        if (autocommit) {
-            backend.postCommand(getAutoCommitOnCmd());
-        } else {
-            backend.postCommand(getAutoCommitOffCmd());
-        }
-        return backend;
-    }
+
     
 	/* 
 	* @see yt.kratos.net.session.Session#commit()
@@ -181,4 +161,7 @@ public class FrontendSession implements Session{
 		
 	}
 
+    public ResponseHandler getResponseHandler() {
+        return this.responseHandler;
+    }
 }

@@ -13,29 +13,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package yt.kratos.mysql.config;
+package yt.kratos.mysql;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import yt.kratos.config.datasource.DataSource;
+import yt.kratos.mysql.config.DatabaseConfig;
+import yt.kratos.mysql.pool.MySQLConnectionPool;
+import yt.kratos.net.backend.BackendConnection;
 
 
 /**
- * @ClassName: DatabaseConfig
+ * @ClassName: MySQLDataSource
  * @Description: TODO(这里用一句话描述这个类的作用)
  * @author YoungTeam
- * @date 2019年1月16日 下午6:55:11
+ * @date 2019年1月21日 下午5:02:35
  *
  */
-public class DatabaseConfig {
+public class MySQLDataSource extends DataSource{
 	
 	private String host = "127.0.0.1";
 	private int port = 3306;
     private String user = "root";
     private String password = "youngteam";
+    private String database = "roc";
 	 
-    public DatabaseConfig(){
-    	
+    private MySQLConnectionPool dataPool;
+
+    public MySQLDataSource(String schema) {
+    	super(schema);
+    }
+
+    public void init (){
+    	this.dataPool= new MySQLConnectionPool(this,20,100);
+    	this.dataPool.init();
     }
 
 	public String getHost() {
@@ -69,5 +78,29 @@ public class DatabaseConfig {
 	public void setPassword(String password) {
 		this.password = password;
 	}
+
+	public MySQLConnectionPool getDataPool() {
+		return dataPool;
+	}
+
+	public String getDatabase() {
+		return database;
+	}
+
+	public void setDatabase(String database) {
+		this.database = database;
+	}
+
+	public void setDataPool(MySQLConnectionPool dataPool) {
+		this.dataPool = dataPool;
+	}
     
+    
+/*    public BackendConnection getBackend() {
+        return dataPool.getBackendConnection();
+    }
+
+    public void recycle(BackendConnection backend){
+        //dataPool.putBackend(backend);
+    }*/
 }
