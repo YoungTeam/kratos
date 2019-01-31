@@ -15,11 +15,15 @@
  */
 package yt.kratos.net;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import yt.kratos.net.codec.MySQLPacketDecoder;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import yt.kratos.mysql.packet.BinaryPacket;
+import yt.kratos.mysql.packet.ErrorPacket;
+import yt.kratos.mysql.packet.OKPacket;
+import yt.kratos.util.StringUtil;
 
 
 /**
@@ -35,7 +39,15 @@ public abstract class AbstractConnection {
 	protected long id; //connection id
 	protected String charset;
     protected int charsetIndex;
-	 
+	protected final AtomicBoolean isClosed;
+    
+    private volatile boolean isRunning;
+    
+	public AbstractConnection(){
+	    this.isClosed = new AtomicBoolean(false);
+	    this.isRunning = false;
+	}
+	
 	public ChannelHandlerContext getCtx() {
 		return ctx;
 	}
@@ -51,16 +63,66 @@ public abstract class AbstractConnection {
 	public String getCharset() {
 		return charset;
 	}
-	public void setCharset(String charset) {
+	
+	public boolean setCharset(String charset) {
 		this.charset = charset;
+		return true;
 	}
 	public int getCharsetIndex() {
 		return charsetIndex;
 	}
-	public void setCharsetIndex(int charsetIndex) {
+	public boolean setCharsetIndex(int charsetIndex) {
 		this.charsetIndex = charsetIndex;
+		return true;
 	}
-	 
+	
+    public boolean isRunning() {
+        return isRunning;
+    }
 
+    public void setRunning(boolean running) {
+        this.isRunning = running;
+    }
+	
+    public boolean isAlive() {
+        return this.ctx.channel().isActive();
+    }
+    
+    public void writeOk() {
+        ByteBuf byteBuf = ctx.alloc().buffer(OKPacket.OK.length).writeBytes(OKPacket.OK);
+        ctx.writeAndFlush(byteBuf);
+    }
+	
+    public void writeErrMessage(byte id, int errno, String msg) {
+        ErrorPacket err = new ErrorPacket();
+        err.packetId = id;
+        err.errno = errno;
+        err.message = StringUtil.encode(msg, charset);
+        err.write(ctx);
+    }	
+   
+	
+	protected  boolean close(){
+        if (isClosed.get()) {
+            return false;
+        } else {
+        	this.ctx.close();
+        	//if (closeSocket()) {
+            return isClosed.compareAndSet(false, true);
+            /*} else {
+                return false;
+            }*/
+        }
+		  //this.ctx.close();
+	}
+
+	protected void ping(BinaryPacket bin) {
+		// TODO Auto-generated method stub
+		this.writeOk();
+	}
+
+	public boolean isClosed() {
+        return isClosed.get();
+    }
 	 
 }

@@ -13,32 +13,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package yt.kratos.net.backend.mysql.cmd;
+package yt.kratos.mysql.proto;
 
 /**
- * @ClassName: CmdType
- * @Description: 区分前端发起命令还是后端发起命令
+ * @ClassName: ServerStatus
+ * @Description: TODO(这里用一句话描述这个类的作用)
  * @author YoungTeam
- * @date 2019年1月15日 下午4:56:06
+ * @date 2019年1月25日 上午11:34:09
  *
  */
-public enum CmdType {
-	 // 前端连接发起的命令
-    FRONTEND_TYPE("0"),
-    // 后端发起的命令
-    BACKEND_TYPE("1");
-
-    private String code;
-
-    CmdType(String code) {
-        this.code = code;
-    }
-
-    public String getCode() {
-        return code;
-    }
-
-    public void setCode(String code) {
-        this.code = code;
-    }
+public interface ServerStatus {
+	
+	/**
+	 * a transaction is active
+	 */
+	public static final int SERVER_STATUS_IN_TRANS = 1;
+	
+	/**
+	 *  auto-commit is enabled
+	 */
+	public static final int SERVER_STATUS_AUTOCOMMIT = 2;	
+	
+    /**
+     * MORE RESULTS
+     */
+    public static final int SERVER_MORE_RESULTS_EXISTS=8;
+    
+    public static final int SERVER_STATUS_NO_GOOD_INDEX_USED=1;
+    
+    public static final int SERVER_STATUS_NO_INDEX_USED=20;
 }

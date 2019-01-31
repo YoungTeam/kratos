@@ -13,32 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package yt.kratos.net.backend.mysql.cmd;
+package yt.kratos.net.frontend.hanlder.command;
+
+import yt.kratos.mysql.proto.ErrorCode;
+import yt.kratos.net.frontend.FrontendConnection;
 
 /**
- * @ClassName: CmdType
- * @Description: 区分前端发起命令还是后端发起命令
+ * @ClassName: SavepointHandler
+ * @Description: TODO(这里用一句话描述这个类的作用)
  * @author YoungTeam
- * @date 2019年1月15日 下午4:56:06
+ * @date 2019年1月25日 下午7:14:59
  *
  */
-public enum CmdType {
-	 // 前端连接发起的命令
-    FRONTEND_TYPE("0"),
-    // 后端发起的命令
-    BACKEND_TYPE("1");
-
-    private String code;
-
-    CmdType(String code) {
-        this.code = code;
-    }
-
-    public String getCode() {
-        return code;
-    }
-
-    public void setCode(String code) {
-        this.code = code;
+public class SavepointHandler {
+    public static void handle(String stmt, FrontendConnection c) {
+        c.writeErrMessage(ErrorCode.ER_UNKNOWN_COM_ERROR, "Unsupported statement");
     }
 }

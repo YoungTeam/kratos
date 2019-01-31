@@ -55,9 +55,9 @@ public class FrontendCommandHandler  extends ChannelInboundHandlerAdapter {
 	            case MySQLPacket.COM_QUERY:
 	            	this.conn.query(bin);
 	                break;
-/*	            case MySQLPacket.COM_PING:
+	            case MySQLPacket.COM_PING:
 	                // todo ping , last access time update
-	            	this.conn.ping();
+	            	this.conn.ping(bin);
 	                break;
 	            case MySQLPacket.COM_QUIT:
 	            	this.conn.close();
@@ -65,7 +65,7 @@ public class FrontendCommandHandler  extends ChannelInboundHandlerAdapter {
 	            case MySQLPacket.COM_PROCESS_KILL:
 	            	this.conn.kill(bin.data);
 	                break;
-	            case MySQLPacket.COM_STMT_PREPARE:
+/*	            case MySQLPacket.COM_STMT_PREPARE:
 	                // todo prepare支持,参考MyCat
 	            	this.conn.stmtPrepare(bin.data);
 	                break;
@@ -74,10 +74,10 @@ public class FrontendCommandHandler  extends ChannelInboundHandlerAdapter {
 	                break;
 	            case MySQLPacket.COM_STMT_CLOSE:
 	            	this.conn.stmtClose(bin.data);
-	                break;
+	                break;*/
 	            case MySQLPacket.COM_HEARTBEAT:
 	            	this.conn.heartbeat(bin.data);
-	                break;*/
+	                break;
 	            default:
 	            	this.conn.writeErrMessage(ErrorCode.ER_UNKNOWN_COM_ERROR, "Unknown command");
 	                break;

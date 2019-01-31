@@ -15,6 +15,9 @@
  */
 package yt.kratos.parse;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import yt.kratos.util.ParseUtil;
 
 /**
@@ -29,9 +32,11 @@ public final class ServerParseShow {
     public static final int OTHER = -1;
     public static final int DATABASES = 1;
     public static final int DATASOURCES = 2;
-    public static final int COBAR_STATUS = 3;
-    public static final int COBAR_CLUSTER = 4;
-
+    public static final int Kratos_STATUS = 3;
+    public static final int Kratos_CLUSTER = 4;
+	public static final int TABLES = 5;
+    public static final int FULLTABLES =65;
+    
     public static int parse(String stmt, int offset) {
         int i = offset;
         for (; i < stmt.length(); i++) {
@@ -42,74 +47,20 @@ public final class ServerParseShow {
                 case '#':
                     i = ParseUtil.comment(stmt, i);
                     continue;
-                case 'C':
+/*                case 'C':
                 case 'c':
-                    return cobarCheck(stmt, i);
+                    return cobarCheck(stmt, i);*/
+                case 'F':
+                case 'f':
+                	return fullTableCheck(stmt,i) ;                    
                 case 'D':
                 case 'd':
                     return dataCheck(stmt, i);
+    			case 'T':
+    			case 't':
+    				return tableCheck(stmt, i);                    
                 default:
                     return OTHER;
-            }
-        }
-        return OTHER;
-    }
-
-    // SHOW COBAR_
-    static int cobarCheck(String stmt, int offset) {
-        if (stmt.length() > offset + "obar_?".length()) {
-            char c1 = stmt.charAt(++offset);
-            char c2 = stmt.charAt(++offset);
-            char c3 = stmt.charAt(++offset);
-            char c4 = stmt.charAt(++offset);
-            char c5 = stmt.charAt(++offset);
-            if ((c1 == 'O' || c1 == 'o') && (c2 == 'B' || c2 == 'b') && (c3 == 'A' || c3 == 'a')
-                    && (c4 == 'R' || c4 == 'r') && (c5 == '_')) {
-                switch (stmt.charAt(++offset)) {
-                    case 'S':
-                    case 's':
-                        return showCobarStatus(stmt, offset);
-                    case 'C':
-                    case 'c':
-                        return showCobarCluster(stmt, offset);
-                    default:
-                        return OTHER;
-                }
-            }
-        }
-        return OTHER;
-    }
-
-    // SHOW COBAR_STATUS
-    static int showCobarStatus(String stmt, int offset) {
-        if (stmt.length() > offset + "tatus".length()) {
-            char c1 = stmt.charAt(++offset);
-            char c2 = stmt.charAt(++offset);
-            char c3 = stmt.charAt(++offset);
-            char c4 = stmt.charAt(++offset);
-            char c5 = stmt.charAt(++offset);
-            if ((c1 == 't' || c1 == 'T') && (c2 == 'a' || c2 == 'A') && (c3 == 't' || c3 == 'T')
-                    && (c4 == 'u' || c4 == 'U') && (c5 == 's' || c5 == 'S')
-                    && (stmt.length() == ++offset || ParseUtil.isEOF(stmt.charAt(offset)))) {
-                return COBAR_STATUS;
-            }
-        }
-        return OTHER;
-    }
-
-    // SHOW COBAR_CLUSTER
-    static int showCobarCluster(String stmt, int offset) {
-        if (stmt.length() > offset + "luster".length()) {
-            char c1 = stmt.charAt(++offset);
-            char c2 = stmt.charAt(++offset);
-            char c3 = stmt.charAt(++offset);
-            char c4 = stmt.charAt(++offset);
-            char c5 = stmt.charAt(++offset);
-            char c6 = stmt.charAt(++offset);
-            if ((c1 == 'L' || c1 == 'l') && (c2 == 'U' || c2 == 'u') && (c3 == 'S' || c3 == 's')
-                    && (c4 == 'T' || c4 == 't') && (c5 == 'E' || c5 == 'e') && (c6 == 'R' || c6 == 'r')
-                    && (stmt.length() == ++offset || ParseUtil.isEOF(stmt.charAt(offset)))) {
-                return COBAR_CLUSTER;
             }
         }
         return OTHER;
@@ -170,4 +121,53 @@ public final class ServerParseShow {
         return OTHER;
     }
 
+    private  static     Pattern fullpattern = Pattern.compile("^\\s*(SHOW)\\s+(FULL)+\\s+(TABLES)\\s+\\s*([\\!\\'\\=a-zA-Z_0-9\\s]*)", Pattern.CASE_INSENSITIVE);
+    public static int fullTableCheck(String  stmt,int offset )
+    {
+        if(fullpattern.matcher(stmt).matches())
+        {
+         return FULLTABLES;
+        }
+        return OTHER;
+    }
+    
+    public 	static int tableCheck(String stmt, int offset) {
+
+		// strict match
+		String pat1 = "^\\s*(SHOW)\\s+(TABLES)\\s*";
+		String pat2 = "^\\s*(SHOW)\\s+(TABLES)\\s+(LIKE\\s+'(.*)')\\s*";
+		String pat3 = "^\\s*(SHOW)\\s+(TABLES)\\s+(FROM)\\s+([a-zA-Z_0-9]+)\\s*";
+		String pat4 = "^\\s*(SHOW)\\s+(TABLES)\\s+(FROM)\\s+([a-zA-Z_0-9]+)\\s+(LIKE\\s+'(.*)')\\s*";
+
+		boolean flag = isShowTableMatched(stmt, pat1);
+		if (flag) {
+			return TABLES;
+		}
+
+		flag = isShowTableMatched(stmt, pat2);
+		if (flag) {
+			return TABLES;
+		}
+
+		flag = isShowTableMatched(stmt, pat3);
+		if (flag) {
+			return TABLES;
+		}
+
+		flag = isShowTableMatched(stmt, pat4);
+		if (flag) {
+			return TABLES;
+		}
+
+		return OTHER;
+
+	}
+    
+	private static boolean isShowTableMatched(String stmt, String pat1) {
+		Pattern pattern = Pattern.compile(pat1, Pattern.CASE_INSENSITIVE);
+		Matcher ma = pattern.matcher(stmt);
+
+		boolean flag = ma.matches();
+		return flag;
+	}    
 }

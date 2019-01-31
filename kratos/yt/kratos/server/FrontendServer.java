@@ -28,6 +28,9 @@ import org.slf4j.LoggerFactory;
 
 import yt.kratos.Kratos;
 import yt.kratos.config.SocketConfig;
+import yt.kratos.mysql.MySQLDataSource;
+import yt.kratos.mysql.config.DatabaseConfig;
+import yt.kratos.mysql.pool.MySQLConnectionPool;
 import yt.kratos.net.frontend.handler.factory.FrontendHandlerFactory;
 
 /**
@@ -53,6 +56,8 @@ public class FrontendServer {
 		}
 		
 		public void startup(){
+
+			
 			EventLoopGroup boss = new NioEventLoopGroup();
 	        EventLoopGroup worker = new NioEventLoopGroup();
 	        try {

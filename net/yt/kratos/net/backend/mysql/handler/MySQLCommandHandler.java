@@ -18,19 +18,17 @@ package yt.kratos.net.backend.mysql.handler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 
+import java.util.LinkedList;
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import yt.kratos.mysql.packet.BinaryPacket;
-import yt.kratos.mysql.packet.EOFPacket;
-import yt.kratos.mysql.packet.ErrorPacket;
-import yt.kratos.net.backend.mysql.MySQLConnState;
 import yt.kratos.net.backend.mysql.MySQLConnection;
-import yt.kratos.net.backend.mysql.cmd.CmdType;
-import yt.kratos.net.backend.mysql.cmd.Command;
+import yt.kratos.net.backend.mysql.MySQLConnectionState;
 import yt.kratos.net.handler.ResponseHandler;
 import yt.kratos.net.session.FrontendSession;
-import yt.kratos.parse.ServerParse;
 
 /**
  * @ClassName: MySQLCommandHandler
@@ -44,111 +42,24 @@ public class MySQLCommandHandler   extends ChannelInboundHandlerAdapter{
     private static final Logger logger = LoggerFactory.getLogger(MySQLCommandHandler.class);
     
 	private MySQLConnection conn;
-    // 是否在select
-    private volatile boolean selecting;
-    private volatile int selectState;
+
     
     public MySQLCommandHandler(MySQLConnection conn) {
         this.conn = conn;
-        this.selecting = false;
-        this.selectState = MySQLConnState.RESULT_SET_FIELD_COUNT;
-        //fieldList = new LinkedList<BinaryPacket>();*/
     }
     
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         BinaryPacket bin = (BinaryPacket) msg;
-        if (processCmd(ctx, bin)) {
-            // fire the next cmd
+        
+        boolean finished = this.getResponseHandler().handleResponse(this.conn,bin);
+        if(finished){
+        	//remove this cmd;
+        	this.conn.pollCommand();
+        	// fire the next cmd
             this.conn.fireCmd();
         }
     }
-    
-    /**
-     * 
-    * @Title: processCmd
-    * @Description: Cmd命令处理
-    * @return boolean    返回类型
-    * @throws
-     */
-    private boolean processCmd(ChannelHandlerContext ctx, BinaryPacket bin) {
-        Command cmd = this.conn.peekCommand();
-        if (cmd.getSqlType() == ServerParse.SELECT || cmd.getSqlType() == ServerParse.SHOW) {
-            selecting = true;
-        } else {
-            selecting = false;
-        }
-        // if handle successful , the command can be remove
-        if (handleResponse(bin, cmd.getType())) {
-        	this.conn.pollCommand();
-            return true;
-        } else {
-            return false;
-        }
-    }    
-    
-    private boolean handleResponse(BinaryPacket bin, CmdType cmdType) {
-        if (selecting) {
-            return handleResultSet(bin, cmdType);
-        } else {
-           // return handleNormalResult(bin, cmdType);
-        	return handleResultSet(bin, cmdType);
-        }
-    }
-    
-    private boolean handleResultSet(BinaryPacket bin, CmdType cmdType) {
-        boolean result = false;
-        int type = bin.data[0];
-        switch (type) {
-            case ErrorPacket.FIELD_COUNT:
-                // 重置状态,且告诉上层当前select已经处理完毕
-                //resetSelect();
-                result = true;
-                ErrorPacket err = new ErrorPacket();
-                err.read(bin);
-                // write(bin,cmdType);
-                getResponseHandler().errorResponse(bin);
-                logger.error("handleResultSet errorMessage:" + new String(err.message));
-                break;
-            case EOFPacket.FIELD_COUNT:
-                EOFPacket eof = new EOFPacket();
-                /*eof.read(bin);
-                if (selectState == MySQLConnState.RESULT_SET_FIELDS) {
-                    // logger.info("eof");
-                    // 推进状态 需要步进两次状态,先到field_eof,再到row
-                    selectStateStep();
-                    selectStateStep();
-                    // 给FieldList增加eof
-                    addToFieldList(bin);
-                    getResponseHandler().fieldListResponse(fieldList);
-                } else {
-                    if (eof.hasStatusFlag(MySQLPacket.SERVER_MORE_RESULTS_EXISTS)) {
-                        // 重置为select的初始状态,但是还是处在select mode下
-                        selectState = MySQLConnState.RESULT_SET_FIELD_COUNT;
-                    } else {
-                        // 重置,且告诉上层当前select已经处理完毕
-                        resetSelect();
-                        result = true;
-                    }
-                    getResponseHandler().lastEofResponse(bin);
-                }*/
-                break;
-            default:
-                switch (selectState) {
-                    case MySQLConnState.RESULT_SET_FIELD_COUNT:
-                        //selectStateStep();
-                        //addToFieldList(bin);
-                        break;
-                    case MySQLConnState.RESULT_SET_FIELDS:
-                        //addToFieldList(bin);
-                        break;
-                    case MySQLConnState.RESULT_SET_ROW:
-                        getResponseHandler().rowResponse(bin);
-                        break;
-                }
-        }
-        return result;
-    }    
     
     private ResponseHandler getResponseHandler() {
         FrontendSession session = (FrontendSession)this.conn.getSession();

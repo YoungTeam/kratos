@@ -21,9 +21,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import yt.kratos.config.SystemConfig;
-import yt.kratos.mysql.MySQLDataSource;
-import yt.kratos.mysql.config.DatabaseConfig;
-import yt.kratos.mysql.pool.MySQLConnectionPool;
 import yt.kratos.net.AbstractConnection;
 import yt.kratos.net.ConnectionFactory;
 import yt.kratos.net.frontend.handler.FrontendQueryHandler;
@@ -57,11 +54,23 @@ public class FrontendConnectionFactory implements ConnectionFactory{
 			//MySQLDataSource dataSource = new MySQLDataSource(pool);
 		 	FrontendConnection connection = new FrontendConnection();
 	        connection.setQueryHandler(new FrontendQueryHandler(connection));
-	        connection.setId(ACCEPT_SEQ.getAndIncrement());
+	        //connection.setId(ACCEPT_SEQ.getAndIncrement());
+	        connection.setId(genConnectionId());
 	        logger.info("connection Id="+connection.getId());
 	        connection.setCharset(SystemConfig.DEFAULT_CHARSET);
 	        //connection.setTxIsolation(SystemConfig.DEFAULT_TX_ISOLATION);
 	        return connection;
 	}
+	
+	private final int genConnectionId() {
+        int current;
+        int next;
+        do {
+            current = ACCEPT_SEQ.get();
+            next = current >= 2147483647?0:current + 1;
+        } while(!ACCEPT_SEQ.compareAndSet(current, next));
+
+        return next;
+    }
 
 }

@@ -17,6 +17,8 @@ package yt.kratos.net.frontend.hanlder.command;
 
 import yt.kratos.net.frontend.FrontendConnection;
 import yt.kratos.net.frontend.response.SelectDatabase;
+import yt.kratos.net.frontend.response.SelectIdentity;
+import yt.kratos.net.frontend.response.SelectUser;
 import yt.kratos.net.frontend.response.SelectVersion;
 import yt.kratos.net.frontend.response.SelectVersionComment;
 import yt.kratos.parse.ServerParse;
@@ -41,7 +43,7 @@ public class SelectHandler {
 	                SelectDatabase.response(c);
 	                break;
 	            case ServerParseSelect.USER:
-	                //SelectUser.response(c);
+	                SelectUser.response(c);
 	                break;
 	            case ServerParseSelect.VERSION:
 	                SelectVersion.response(c);
@@ -63,7 +65,7 @@ public class SelectHandler {
 	                }
 	                offset = ServerParseSelect.indexAfterLastInsertIdFunc(stmt, offset);
 	                offset = ServerParseSelect.skipAs(stmt, offset);
-	                //SelectLastInsertId.response(c, stmt, offset);
+	                SelectLastInsertId.response(c, stmt, offset);
 	                break;
 	            case ServerParseSelect.IDENTITY:
 	                offset = ParseUtil.move(stmt, 0, "select".length());
@@ -84,7 +86,7 @@ public class SelectHandler {
 	                offset = ServerParseSelect.indexAfterIdentity(stmt, offset);
 	                String orgName = stmt.substring(indexOfAtAt, offset);
 	                offset = ServerParseSelect.skipAs(stmt, offset);
-	                //SelectIdentity.response(c, stmt, offset, orgName);
+	                SelectIdentity.response(c, stmt, offset, orgName);
 	                break;
 	            default:
 	                c.execute(stmt, ServerParse.SELECT);

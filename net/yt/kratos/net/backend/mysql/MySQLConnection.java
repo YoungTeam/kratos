@@ -102,9 +102,6 @@ public class MySQLConnection  extends BackendConnection{
         this.isAuthenticated = isAuthenticated;
     }
     
-
-
-
     /**
      * 
     * @Title: postCommand
@@ -314,5 +311,23 @@ public class MySQLConnection  extends BackendConnection{
 	            default:
 	                throw new UnknownTxIsolationException("txIsolation:" + txIsolation);
 	        }
-	    }	
+	    }
+
+		/* 
+		* @see yt.kratos.net.AbstractConnection#close()
+		*/ 
+		@Override
+		public boolean close() {
+			return super.close();
+		}
+
+		/* 
+		* @see yt.kratos.net.backend.BackendConnection#recycle()
+		*/ 
+		@Override
+		public void recycle() {
+			// TODO Auto-generated method stub
+		        logger.info("backendConnection has been recycled");
+		        this.mySqlDataPool.recycle(this);//.putBackendConnection(this);
+		}	
 }

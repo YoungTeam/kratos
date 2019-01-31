@@ -15,7 +15,9 @@
  */
 package yt.kratos.net.session;
 
+import yt.kratos.net.backend.BackendConnection;
 import yt.kratos.net.frontend.FrontendConnection;
+import yt.kratos.net.route.RouteResultsetNode;
 
 
 /**
@@ -29,8 +31,9 @@ public interface Session {
     /**
      * 取得源端连接
      */
-    FrontendConnection getConnection();
+    FrontendConnection getFrontendConnection();
 
+    BackendConnection getBackendConnection(RouteResultsetNode key);
     /**
      * 取得当前目标端数量
      */
@@ -62,4 +65,6 @@ public interface Session {
      * 终止会话，必须在关闭源端连接后执行该方法。
      */
     void terminate();
+    
+    void release();
 }

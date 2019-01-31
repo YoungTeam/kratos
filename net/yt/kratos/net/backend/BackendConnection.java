@@ -15,6 +15,7 @@
  */
 package yt.kratos.net.backend;
 
+import io.netty.channel.Channel;
 import yt.kratos.net.AbstractConnection;
 import yt.kratos.net.session.Session;
 
@@ -28,11 +29,37 @@ import yt.kratos.net.session.Session;
 public abstract class BackendConnection extends AbstractConnection{
     
     protected Session session;
-
+    protected Channel ch;
+    public BackendConnection(){
+    	super();
+    }
+    
 	public Session getSession() {
 		return session;
 	}
 
+	public Channel getCh() {
+		return ch;
+	}
+
+	public void setCh(Channel ch) {
+		this.ch = ch;
+	}
+
 	public  abstract void setSession(Session session);
+
 	
+	public abstract void recycle();
+	
+    @Override
+    public String toString() {
+        return new StringBuilder().append("[thread=")
+                                  .append(Thread.currentThread().getName())
+                                  .append(",class=")
+                                  .append(getClass().getSimpleName())
+                                  .append(",ch=")
+                                  .append(ch.id())
+                                  .append(']')
+                                  .toString();
+    }
 }

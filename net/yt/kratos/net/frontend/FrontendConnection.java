@@ -22,15 +22,16 @@ import java.io.UnsupportedEncodingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import yt.kratos.mysql.MySQLDataSource;
 import yt.kratos.mysql.MySQLMsg;
 import yt.kratos.mysql.packet.BinaryPacket;
 import yt.kratos.mysql.packet.ErrorPacket;
 import yt.kratos.mysql.packet.OKPacket;
 import yt.kratos.mysql.proto.ErrorCode;
 import yt.kratos.net.AbstractConnection;
+import yt.kratos.net.frontend.response.Ping;
 import yt.kratos.net.handler.QueryHandler;
 import yt.kratos.net.session.FrontendSession;
+import yt.kratos.util.CharsetUtil;
 import yt.kratos.util.StringUtil;
 
 /**
@@ -45,11 +46,23 @@ public class FrontendConnection extends AbstractConnection{
 	
 	
 	protected String schema;
+    // update by the ResponseHandler
+    protected String user;
+    protected String host;
+    protected int port;
+    protected String charset;
+    protected int charsetIndex;
     protected QueryHandler queryHandler;
+    
 	private FrontendSession session;    
+	private long lastInsertId;
 	
+    private volatile int txIsolation;
+	private volatile boolean autocommit = true;
+	  
     public FrontendConnection(){
-    	  this.session = new FrontendSession(this);
+    	 super();
+    	 this.session = new FrontendSession(this);
     }
     
     public String getSchema() {
@@ -60,6 +73,68 @@ public class FrontendConnection extends AbstractConnection{
 		this.schema = schema;
 	}
 
+	public String getUser() {
+		return user;
+	}
+
+	public void setUser(String user) {
+		this.user = user;
+	}
+
+	public String getHost() {
+		return host;
+	}
+
+	public void setHost(String host) {
+		this.host = host;
+	}
+
+	public int getPort() {
+		return port;
+	}
+
+	public void setPort(int port) {
+		this.port = port;
+	}
+
+	public String getCharset() {
+		return charset;
+	}
+
+	public boolean setCharset(String charset) {
+        int ci = CharsetUtil.getIndex(charset);
+        if (ci > 0) {
+            this.charset = charset;
+            this.charsetIndex = ci;
+            return true;
+        } else {
+            return false;
+        }
+	}
+
+	public int getCharsetIndex() {
+		return charsetIndex;
+	}
+
+	public boolean setCharsetIndex(int ci) {
+        String charset = CharsetUtil.getCharset(ci);
+        if (charset != null) {
+            this.charset = charset;
+            this.charsetIndex = ci;
+            return true;
+        } else {
+            return false;
+        }
+	}
+
+	public int getTxIsolation() {
+		return txIsolation;
+	}
+
+	public void setTxIsolation(int txIsolation) {
+		this.txIsolation = txIsolation;
+	}
+
 	public QueryHandler getQueryHandler() {
 		return queryHandler;
 	}
@@ -67,9 +142,26 @@ public class FrontendConnection extends AbstractConnection{
 	public void setQueryHandler(QueryHandler queryHandler) {
 		this.queryHandler = queryHandler;
 	}
+	
+	public long getLastInsertId() {
+		return lastInsertId;
+	}
 
+	public void setLastInsertId(long lastInsertId) {
+		this.lastInsertId = lastInsertId;
+	}
+	
+    public FrontendSession getSession() {
+		return session;
+	}
 
+	public boolean isAutocommit() {
+        return autocommit;
+    }
 
+    public void setAutocommit(boolean autocommit) {
+        this.autocommit = autocommit;
+    }
 	// initDB的同时 bind BackendConnecton
     public void initDB(BinaryPacket bin) {
         MySQLMsg mm = new MySQLMsg(bin.data);
@@ -121,29 +213,71 @@ public class FrontendConnection extends AbstractConnection{
         }
     }    
     
-    public void writeOk() {
-        ByteBuf byteBuf = ctx.alloc().buffer(OKPacket.OK.length).writeBytes(OKPacket.OK);
-        ctx.writeAndFlush(byteBuf);
+    @Override
+    public void ping(BinaryPacket bin) {
+        Ping.response(this);
     }
+    
+    
 	
     public void writeErrMessage(int errno, String msg) {
         logger.warn(String.format("[FrontendConnection]ErrorNo=%d,ErrorMsg=%s", errno, msg));
         writeErrMessage((byte) 1, errno, msg);
     }
-	
-    public void writeErrMessage(byte id, int errno, String msg) {
-        ErrorPacket err = new ErrorPacket();
-        err.packetId = id;
-        err.errno = errno;
-        err.message = StringUtil.encodeString(msg, charset);
-        err.write(ctx);
+    
+    /**
+     * 提交事务
+     */
+    public void commit() {
+        if (schema == null) {
+            writeErrMessage(ErrorCode.ER_NO_DB_ERROR, "No database selected");
+            return;
+        } else {
+            // 如果是自动提交,没有事务,直接返回okay,不做任何操作
+            if(isAutocommit()){
+                writeOk();
+            }else {
+                session.commit();
+            }
+        }
     }
-    	
-    public void close() {
+
+    /**
+     * 回滚事务
+     */
+    public void rollback() {
+        if (schema == null) {
+            writeErrMessage(ErrorCode.ER_NO_DB_ERROR, "No database selected");
+            return;
+        } else {
+            // 如果是自动提交,没有事务,直接返回okay,不做任何操作
+            if (isAutocommit()) {
+                writeOk();
+            } else {
+                session.rollback();
+
+            }
+        }
+    }
+    
+	public void kill(byte[] data){
+		  writeErrMessage(ErrorCode.ER_UNKNOWN_COM_ERROR, "Unknown command");
+	}
+    
+    public void heartbeat(byte[] data) {
+    	this.writeOk();
+    }
+	
+    @Override
+    public boolean close() {
     	  logger.info("close connection:"+this.id);
-        //logger.info("close connection,host:{},port:{}", host, port);
-        //session.close();
-        ctx.close();
+    	  if(super.close()){
+    		//todo 这里用线程池释放session
+        	  session.terminate();  
+        	  return true;
+    	  }
+    	  
+    	  return false;
     }
     
     public void execute(String sql, int type) {
@@ -153,5 +287,21 @@ public class FrontendConnection extends AbstractConnection{
         } else {
             session.execute(sql, type);
         }
+    }
+    
+    @Override
+    public String toString() {
+        return new StringBuilder().append("[thread=")
+                                  .append(Thread.currentThread().getName())
+                                  .append(",class=")
+                                  .append(getClass().getSimpleName())
+                                  .append(",host=")
+                                  .append(host)
+                                  .append(",port=")
+                                  .append(port)
+                                  .append(",schema=")
+                                  .append(schema)
+                                  .append(']')
+                                  .toString();
     }
 }

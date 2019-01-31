@@ -30,7 +30,7 @@ import yt.kratos.mysql.packet.CommandPacket;
 public class Command {
     // command的比特buffer
     private CommandPacket cmdPacket;
-    // command的Type
+    // command的Type，区分命令前后端
     private CmdType type;
     // sqlType,select|update|set|delete
     private int sqlType;

@@ -13,15 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package yt.kratos.server;
+package yt.kratos.net.frontend.response;
+
+import yt.kratos.Kratos;
+import yt.kratos.mysql.packet.ErrorPacket;
+import yt.kratos.net.frontend.FrontendConnection;
+import yt.kratos.util.PacketUtil;
 
 /**
- * @ClassName: BackendServer
+ * @ClassName: Ping
  * @Description: TODO(这里用一句话描述这个类的作用)
  * @author YoungTeam
- * @date 2019年1月15日 下午3:16:09
+ * @date 2019年1月28日 下午2:13:51
  *
  */
-public class BackendServer {
+public class Ping {
+    private static final ErrorPacket error = PacketUtil.getShutdown();
 
+    public static void response(FrontendConnection c) {
+        if (Kratos.me.isOnline()) {
+        	c.writeOk();
+        } else {
+            error.write(c.getCtx());
+        }
+    }
 }

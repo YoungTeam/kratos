@@ -19,7 +19,11 @@ import java.io.UnsupportedEncodingException;
 import java.util.List;
 
 import yt.kratos.mysql.packet.BinaryPacket;
+import yt.kratos.mysql.packet.OKPacket;
+import yt.kratos.net.backend.BackendConnection;
+import yt.kratos.net.backend.mysql.MySQLConnection;
 import yt.kratos.net.route.RouteResultset;
+import yt.kratos.net.session.FrontendSession;
 
 
 /**
@@ -29,22 +33,91 @@ import yt.kratos.net.route.RouteResultset;
  * @date 2019年1月20日 下午2:48:55
  *
  */
-public interface ResponseHandler {
-    // 执行sql
-    void execute(RouteResultset rrs) throws UnsupportedEncodingException;
+public abstract class ResponseHandler {
+	protected FrontendSession session;
+	
+	public ResponseHandler(FrontendSession  session){
+		this.session = session;
+	}
+    //前端传过来的查询请求
+    public abstract void execute(RouteResultset rrs) throws UnsupportedEncodingException;
+    //处理后端返回的数据
+    public abstract boolean handleResponse(BackendConnection conn,BinaryPacket bin);
+    
+    public void fieldListResponse(List<BinaryPacket> fieldList) {
+        writeFiledList(fieldList);
+    }
+    
+    /**
+     * 
+    * @Title: okResponse
+    * @Description: 执行成功Response
+    * @return void    返回类型
+    * @throws
+     */
+    protected void okResponse(BinaryPacket bin) {
+        OKPacket ok = new OKPacket();
+        session.getFrontendConnection().setLastInsertId(ok.insertId);
+        bin.write(session.getFrontendConnection().getCtx());
+        if (session.getFrontendConnection().isAutocommit()) {
+            session.release();
+        }
+    }
+    
+    /**
+    * @Title: errorResponse
+    * @Description: 执行失败Response
+    * @return void    返回类型
+    * @throws
+     */
+    protected void errorResponse(BinaryPacket bin) {
+        bin.write(session.getFrontendConnection().getCtx());
+        if (session.getFrontendConnection().isAutocommit()) {
+            session.release();
+        }
+    }
 
-    // fieldListResponse
-    void fieldListResponse(List<BinaryPacket> fieldList);
+    /**
+     * 
+    * @Title: writeFiledList
+    * @Description:  返回 字段头 Response
+    * @return void    返回类型
+    * @throws
+     */
+    private void writeFiledList(List<BinaryPacket> fieldList) {
+        for (BinaryPacket bin : fieldList) {
+            bin.write(session.getFrontendConnection().getCtx());
+        }
+        fieldList.clear();
+    }
 
-    // errorResponse
-    void errorResponse(BinaryPacket bin);
+    /**
+     * 
+    * @Title: rowResponse
+    * @Description: 返回行数据 Response
+    * @return void    返回类型
+    * @throws
+     */
+    protected void rowResponse(BinaryPacket bin) {
+        bin.write(session.getFrontendConnection().getCtx());
+    }
 
-    // okResponse
-    void okResponse(BinaryPacket bin);
-
-    // rowRespons
-    void rowResponse(BinaryPacket bin);
-
-    // lastEofResponse
-    void lastEofResponse(BinaryPacket bin);
+    /**
+     * 
+    * @Title: lastEofResponse
+    * @Description: 返回结束标记 Response
+    * @return void    返回类型
+    * @throws
+     */
+    protected void lastEofResponse(BinaryPacket bin) {
+        bin.write(session.getFrontendConnection().getCtx());
+        if (session.getFrontendConnection().isAutocommit()) {
+            session.release();
+        }
+    }  
+    
+    
+    protected BackendConnection getBackendConnection(RouteResultset rrs) {
+        return this.session.getBackendConnection(rrs.getNode());
+    }
 }

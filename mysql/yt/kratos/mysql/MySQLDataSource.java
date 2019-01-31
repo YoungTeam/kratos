@@ -35,7 +35,9 @@ public class MySQLDataSource extends DataSource{
     private String user = "root";
     private String password = "youngteam";
     private String database = "roc";
-	 
+	private int initSize = 20;
+	private int maxPoolSize = 50;
+    
     private MySQLConnectionPool dataPool;
 
     public MySQLDataSource(String schema) {
@@ -43,7 +45,7 @@ public class MySQLDataSource extends DataSource{
     }
 
     public void init (){
-    	this.dataPool= new MySQLConnectionPool(this,20,100);
+    	this.dataPool= new MySQLConnectionPool(this,this.initSize,this.maxPoolSize);
     	this.dataPool.init();
     }
 
@@ -79,10 +81,6 @@ public class MySQLDataSource extends DataSource{
 		this.password = password;
 	}
 
-	public MySQLConnectionPool getDataPool() {
-		return dataPool;
-	}
-
 	public String getDatabase() {
 		return database;
 	}
@@ -91,6 +89,26 @@ public class MySQLDataSource extends DataSource{
 		this.database = database;
 	}
 
+	public int getInitSize() {
+		return initSize;
+	}
+
+	public void setInitSize(int initSize) {
+		this.initSize = initSize;
+	}
+
+	public int getMaxPoolSize() {
+		return maxPoolSize;
+	}
+
+	public void setMaxPoolSize(int maxPoolSize) {
+		this.maxPoolSize = maxPoolSize;
+	}
+
+	public MySQLConnectionPool getDataPool() {
+		return dataPool;
+	}
+	
 	public void setDataPool(MySQLConnectionPool dataPool) {
 		this.dataPool = dataPool;
 	}

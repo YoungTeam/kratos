@@ -15,6 +15,9 @@
  */
 package yt.kratos.net.backend.mysql.handler;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.netty.channel.Channel;
 import io.netty.channel.pool.ChannelPoolHandler;
 import yt.kratos.net.backend.mysql.MySQLConnection;
@@ -29,7 +32,7 @@ import yt.kratos.net.codec.MySQLPacketDecoder;
  *
  */
 public class MySQLChannelPoolHandler implements ChannelPoolHandler {
-
+	private static final Logger logger = LoggerFactory.getLogger(MySQLChannelPoolHandler.class);
 	MySQLConnectionFactory factory;
 	
 	public MySQLChannelPoolHandler(MySQLConnectionFactory factory){
@@ -59,6 +62,7 @@ public class MySQLChannelPoolHandler implements ChannelPoolHandler {
 	@Override
 	public void channelCreated(Channel ch) throws Exception {
         MySQLConnection connection = (MySQLConnection)factory.getConnection();
+        connection.setCh(ch);
         //FrontendAuthHandler authHandler = new FrontendAuthHandler(conn);
         MySQLInitHandler initHandler = new MySQLInitHandler(connection);
         MySQLAuthHandler authHandler = new MySQLAuthHandler(connection);
@@ -66,6 +70,8 @@ public class MySQLChannelPoolHandler implements ChannelPoolHandler {
         ch.pipeline().addLast(new MySQLPacketDecoder());
         ch.pipeline().addLast(MySQLInitHandler.HANDLER_NAME, initHandler);
         ch.pipeline().addLast(authHandler);
+        
+        logger.info("Create a new MySQLConnection"+connection);
 	}
 
 }

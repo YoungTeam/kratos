@@ -18,6 +18,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 
+import java.net.InetSocketAddress;
 import java.security.NoSuchAlgorithmException;
 
 import org.slf4j.Logger;
@@ -33,7 +34,6 @@ import yt.kratos.mysql.packet.QuitPacket;
 import yt.kratos.mysql.proto.Capabilities;
 import yt.kratos.mysql.proto.ErrorCode;
 import yt.kratos.net.frontend.FrontendConnection;
-import yt.kratos.net.frontend.IdGenerator;
 import yt.kratos.util.CharsetUtil;
 import yt.kratos.util.RandomUtil;
 import yt.kratos.util.SecurityUtil;
@@ -47,8 +47,7 @@ import yt.kratos.util.SecurityUtil;
  */
 public class FrontendAuthHandler extends ChannelInboundHandlerAdapter{
 		private static final Logger logger = LoggerFactory.getLogger(FrontendAuthHandler.class);
- 	    private static final IdGenerator ID_GENERATOR = new IdGenerator();
- 	   private byte[] seed;
+		private byte[] seed;
  	    protected FrontendConnection conn;
 
  	    public FrontendAuthHandler(FrontendConnection conn) {
@@ -77,12 +76,11 @@ public class FrontendAuthHandler extends ChannelInboundHandlerAdapter{
 	            failure(ErrorCode.ER_ACCESS_DENIED_ERROR, "Access denied for user '" + responsePacket.user + "'");
 	            return;
 	        }
-	        
-/*	        source.setUser(authPacket.user);
-	        source.setSchema(authPacket.database);
-	        source.setHost(((InetSocketAddress) ctx.channel().remoteAddress()).getAddress().getHostAddress());
-	        source.setPort(((InetSocketAddress) ctx.channel().remoteAddress()).getPort());
-	        success(ctx);*/
+
+	        this.conn.setUser(responsePacket.user);
+	        this.conn.setSchema(responsePacket.database);
+	        this.conn.setHost(((InetSocketAddress) ctx.channel().remoteAddress()).getAddress().getHostAddress());
+	        this.conn.setPort(((InetSocketAddress) ctx.channel().remoteAddress()).getPort());
 	        success(ctx);
 	    }
 	   
@@ -148,7 +146,7 @@ public class FrontendAuthHandler extends ChannelInboundHandlerAdapter{
             hs.packetId = 0;
             hs.protocolVersion = Versions.PROTOCOL_VERSION;
             hs.serverVersion = Versions.SERVER_VERSION.getBytes();
-            hs.connectionId = ID_GENERATOR.getId();
+            hs.connectionId = this.conn.getId();
             hs.seed = rand1;
             hs.serverCapabilities = getServerCapabilities();
             int charsetIndex =   CharsetUtil.getDBIndex("utf8");

@@ -16,9 +16,7 @@
 package yt.kratos.mysql.pool;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
@@ -34,6 +32,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,7 +40,7 @@ import org.slf4j.LoggerFactory;
 import yt.kratos.config.SocketConfig;
 import yt.kratos.config.SystemConfig;
 import yt.kratos.mysql.MySQLDataSource;
-import yt.kratos.mysql.config.DatabaseConfig;
+import yt.kratos.net.backend.BackendConnection;
 import yt.kratos.net.backend.mysql.MySQLConnection;
 import yt.kratos.net.backend.mysql.MySQLConnectionFactory;
 import yt.kratos.net.backend.mysql.handler.MySQLChannelPoolHandler;
@@ -78,30 +77,30 @@ public class MySQLConnectionPool {
     // Backend Connection Factory
     private MySQLConnectionFactory factory;
     
-    // 连接池
-    private final MySQLConnection[] conns;
+  /*  // 连接池
+    private final MySQLConnection[] conns;*/
     
     // 线程间同步的闩锁
     private CountDownLatch latch;
     // get/put的锁
-    //private final ReentrantLock lock;
+    private final ReentrantLock lock;
     // 当前连接池是否被初始化成功的标识
     private final AtomicBoolean initialized;
     // data pool的command allocator
-    private ByteBufAllocator allocator;
+    //private ByteBufAllocator allocator;
     
     public MySQLConnectionPool(MySQLDataSource dbSource,int initSize, int maxPoolSize) {
     	this.dbSource = dbSource;
         this.maxPoolSize = maxPoolSize;
         this.initSize = initSize;
         this.idleCount = 0;
-        this.conns = new MySQLConnection[this.maxPoolSize];
+        //this.conns = new MySQLConnection[this.maxPoolSize];
         this.backendGroup = new NioEventLoopGroup();
         this.bootstrap = new Bootstrap();
         this.latch = new CountDownLatch(initSize);//初始化链接同步latch
-       // lock = new ReentrantLock();
+        this.lock = new ReentrantLock();
         initialized = new AtomicBoolean(false);
-        allocator = new UnpooledByteBufAllocator(false);
+       // allocator = new UnpooledByteBufAllocator(false);
         //this.init();
     }
     
@@ -133,23 +132,24 @@ public class MySQLConnectionPool {
          try {
 			this.latch.await();
 			logger.info("MySQL Backend connection(count:{}) succed ",this.channelPool.acquiredChannelCount());
-			this.latch = null; //for gc
-			
+			this.markInit();			
 			//初始化connections
-			int i =0;
+			/*int i =0;
 			for(Future<Channel> fch:futureList){
 				Channel ch = fch.get();//.get(500, TimeUnit.SECONDS);
 				MySQLInitHandler initHandler = (MySQLInitHandler)ch.pipeline().get(MySQLInitHandler.HANDLER_NAME);
-				this.conns[i] = initHandler.getConnection();
+				this.putBackendConnection( initHandler.getConnection());
 				i++;
-			}
+			}*/
 			
-		} catch (InterruptedException | ExecutionException e) {
+		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			   logger.error("MySQL Backend connection failed ", e);
+		}finally{
+			this.latch = null; //for gc
 		}
          
-        //this.initIdleCheck();//心跳检测链接状态
+        this.initIdleCheck();//心跳检测链接状态
         
     }
     
@@ -174,6 +174,8 @@ public class MySQLConnectionPool {
         }
 
         private void idleCheck() {
+        	
+        	//getBackendConnection().postCommand(command);;
             // 伪代码 类Druid的最小锁时间实现
             // 在这个地方拿出连接
             // 心跳command用当前allocate(Unpooled)来分配,防内存泄露
@@ -184,10 +186,15 @@ public class MySQLConnectionPool {
             // if(marInHeartBeat) then read okay
             // then recycle
             // heartBeat完成,锁只在一处
-            logger.info("we now do idle check");
+            //logger.info("we now do idle check");
         }
     }    
     
+    private void markInit() {
+        if (initialized.compareAndSet(false, true)) {
+            initialized.set(true);
+        }
+    }
     
     public boolean isInited() {
         return initialized.get();
@@ -209,24 +216,74 @@ public class MySQLConnectionPool {
 	* @throws
 	 */
 	public MySQLConnection getBackendConnection(){
+		MySQLConnection mysqlConn = null;
+/*	    lock.lock();
+	    try {
+	            // idleCount 初始为0,如果有闲置的链接且不唯一
+	            if (idleCount >= 1 && this.conns[idleCount-1] != null) {
+	            	mysqlConn = this.conns[idleCount-1];
+	                idleCount--;
+	                return mysqlConn;
+	            }
+        } finally {
+            lock.unlock();
+        }
+	    
+	    // must create new connection
+	    logger.info("create new conneciton");
 		
-		for(MySQLConnection conn : this.conns){
-			if(conn!=null)
-				return conn;
-		}
-/*		Future<Channel> fch = this.channelPool.acquire();
+		//如果initSize下的链接数不够，则需要创建新的链接
+		this.latch = new CountDownLatch(1);//初始化链接同步latch
+*/		Future<Channel> fch = this.channelPool.acquire();	
+
+		System.out.println(this.channelPool.acquiredChannelCount());
+		//this.channelPool.release(channel)
 		try {
+			fch.sync();
+			//this.latch.await();
 			Channel ch = fch.get();//.get(500, TimeUnit.SECONDS);
 			MySQLInitHandler initHandler = (MySQLInitHandler)ch.pipeline().get(MySQLInitHandler.HANDLER_NAME);
-			return initHandler.getConnection();
+			mysqlConn = initHandler.getConnection();
+			logger.info("Get MySQLConnection"+mysqlConn);
+			//this.putBackendConnection(mysqlConn);
+			return mysqlConn;
 		} catch (InterruptedException | ExecutionException e) {
 			// TODO Auto-generated catch block
 			logger.error("Get MySQLConnection Fail",e);
-		}*/
+		}finally{
+			//this.latch = null;
+		}
+		
 		
 		return null;
 	}
 	
+/*    public void putBackendConnection(MySQLConnection mysqlConn) {
+        lock.lock();
+        try {
+            if (mysqlConn.isAlive()) {
+                if (this.idleCount < this.maxPoolSize) {
+                    this.conns[idleCount] = mysqlConn;
+                    this.idleCount++;
+                } else {
+                	mysqlConn.close();
+                    logger.info("backendConnection too much,so close it");
+                }
+            } else {
+                logger.info("backendConnection not alive,so discard it");
+            }
+
+        } finally {
+            lock.unlock();
+        }
+    }	*/
+	
+    public void recycle(BackendConnection backend) {
+    	//this.channelPool.release(backend.getCh());
+    	
+    	//putBackendConnection((MySQLConnection)backend);
+    }
+    
 	/**
      * 
     * @Title: countDown

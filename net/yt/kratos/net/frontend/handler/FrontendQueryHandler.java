@@ -20,7 +20,13 @@ import org.slf4j.LoggerFactory;
 
 import yt.kratos.mysql.proto.ErrorCode;
 import yt.kratos.net.frontend.FrontendConnection;
+import yt.kratos.net.frontend.hanlder.command.BeginHandler;
+import yt.kratos.net.frontend.hanlder.command.KillHandler;
+import yt.kratos.net.frontend.hanlder.command.SavepointHandler;
 import yt.kratos.net.frontend.hanlder.command.SelectHandler;
+import yt.kratos.net.frontend.hanlder.command.SetHandler;
+import yt.kratos.net.frontend.hanlder.command.ShowHandler;
+import yt.kratos.net.frontend.hanlder.command.StartHandler;
 import yt.kratos.net.frontend.hanlder.command.UseHandler;
 import yt.kratos.net.handler.QueryHandler;
 import yt.kratos.parse.ServerParse;
@@ -58,25 +64,25 @@ public class FrontendQueryHandler implements QueryHandler{
             //ExplainHandler.handle(sql, c, rs >>> 8);
             break;
         case ServerParse.SET:
-            //SetHandler.handle(sql, c, rs >>> 8);
+            SetHandler.handle(sql, c, rs >>> 8);
             break;
         case ServerParse.SHOW:
-            //ShowHandler.handle(sql, c, rs >>> 8);
+            ShowHandler.handle(sql, c, rs >>> 8);
             break;
         case ServerParse.SELECT:
             SelectHandler.handle(sql, c, rs >>> 8);
             break;
         case ServerParse.START:
-            //StartHandler.handle(sql, c, rs >>> 8);
+            StartHandler.handle(sql, c, rs >>> 8);
             break;
         case ServerParse.BEGIN:
-            //BeginHandler.handle(sql, c);
+            BeginHandler.handle(sql, c);
             break;
         case ServerParse.SAVEPOINT:
-            //SavepointHandler.handle(sql, c);
+            SavepointHandler.handle(sql, c);
             break;
         case ServerParse.KILL:
-            //KillHandler.handle(sql, rs >>> 8, c);
+            KillHandler.handle(sql, rs >>> 8, c);
             break;
         case ServerParse.KILL_QUERY:
             c.writeErrMessage(ErrorCode.ER_UNKNOWN_COM_ERROR, "Unsupported command");
@@ -85,13 +91,13 @@ public class FrontendQueryHandler implements QueryHandler{
             UseHandler.handle(sql, c, rs >>> 8);
             break;
         case ServerParse.COMMIT:
-            //c.commit();
+            c.commit();
             break;
         case ServerParse.ROLLBACK:
-            //c.rollback();
+            c.rollback();
             break;
         default:
-            //c.execute(sql, rs);
+            c.execute(sql, rs);
         }		
 	}
 
