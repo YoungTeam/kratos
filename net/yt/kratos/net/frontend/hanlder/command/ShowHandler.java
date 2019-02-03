@@ -18,6 +18,7 @@ package yt.kratos.net.frontend.hanlder.command;
 import yt.kratos.net.frontend.FrontendConnection;
 import yt.kratos.net.frontend.response.ShowDatabases;
 import yt.kratos.net.frontend.response.ShowTables;
+import yt.kratos.parse.ServerParse;
 import yt.kratos.parse.ServerParseShow;
 
 
@@ -40,11 +41,10 @@ public class ShowHandler {
     			break;
             case ServerParseShow.FULLTABLES:
                 //ShowFullTables.response(c, stmt,type);
+            	 c.execute(stmt, ServerParse.SHOW);
                 break;                
             default:
-              // todo datasource
-            	ShowDatabases.response(c);
-                //c.execute(stmt, ServerParse.SHOW);
+                c.execute(stmt, ServerParse.SHOW);
                 break;
         }
     }

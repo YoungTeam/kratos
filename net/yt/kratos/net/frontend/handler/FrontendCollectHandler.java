@@ -23,6 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import yt.kratos.mysql.proto.ErrorCode;
 import yt.kratos.net.frontend.FrontendConnection;
 
 
@@ -55,8 +56,23 @@ public class FrontendCollectHandler extends ChannelInboundHandlerAdapter {
 		public void channelInactive(ChannelHandlerContext ctx) throws Exception {
 			FrontendConnectionMap.remove(this.conn.getId());
 			logger.info("connection failed! total number is {}", FrontendConnectionMap.size());
-			this.conn.close();
-		    ctx.fireChannelActive();
+			this.conn.close();    
+		    ctx.fireChannelInactive();
+		}
+
+		/**
+		* @Title: exceptionCaught
+		* @Description: TODO
+		* @return void    返回类型
+		* @throws
+		*/ 
+	    @Override
+	    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+			// TODO Auto-generated method stub
+	        logger.error("Exception caught",cause);
+	        FrontendCollectHandler.FrontendConnectionMap.remove(this.conn.getId());
+	        this.conn.writeErrMessage(ErrorCode.ERR_EXCEPTION_CAUGHT,cause.getMessage());
+	        ctx.close();
 		}
 	    
 }

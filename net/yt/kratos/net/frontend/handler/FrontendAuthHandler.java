@@ -26,7 +26,7 @@ import org.slf4j.LoggerFactory;
 
 import yt.kratos.config.Versions;
 import yt.kratos.mysql.packet.BinaryPacket;
-import yt.kratos.mysql.packet.HandshakeInitialPacket;
+import yt.kratos.mysql.packet.HandshakeInitialPacketV10;
 import yt.kratos.mysql.packet.HandshakeResponsePacket;
 import yt.kratos.mysql.packet.MySQLPacket;
 import yt.kratos.mysql.packet.OKPacket;
@@ -142,7 +142,7 @@ public class FrontendAuthHandler extends ChannelInboundHandlerAdapter{
             this.seed = seed;
 
             // 发送握手数据包
-            HandshakeInitialPacket hs = new HandshakeInitialPacket();
+            HandshakeInitialPacketV10 hs = new HandshakeInitialPacketV10();
             hs.packetId = 0;
             hs.protocolVersion = Versions.PROTOCOL_VERSION;
             hs.serverVersion = Versions.SERVER_VERSION.getBytes();
@@ -164,17 +164,25 @@ public class FrontendAuthHandler extends ChannelInboundHandlerAdapter{
 	        flag |= Capabilities.CLIENT_LONG_FLAG;
 	        flag |= Capabilities.CLIENT_CONNECT_WITH_DB;
 	        // flag |= Capabilities.CLIENT_NO_SCHEMA;
-	        // flag |= Capabilities.CLIENT_COMPRESS;
+	        flag |= Capabilities.CLIENT_COMPRESS;
 	        flag |= Capabilities.CLIENT_ODBC;
-	        // flag |= Capabilities.CLIENT_LOCAL_FILES;
+	        flag |= Capabilities.CLIENT_LOCAL_FILES;
 	        flag |= Capabilities.CLIENT_IGNORE_SPACE;
 	        flag |= Capabilities.CLIENT_PROTOCOL_41;
 	        flag |= Capabilities.CLIENT_INTERACTIVE;
 	        // flag |= Capabilities.CLIENT_SSL;
 	        flag |= Capabilities.CLIENT_IGNORE_SIGPIPE;
 	        flag |= Capabilities.CLIENT_TRANSACTIONS;
-	        // flag |= ServerDefs.CLIENT_RESERVED;
+	        flag |= Capabilities.CLIENT_RESERVED;
 	        flag |= Capabilities.CLIENT_SECURE_CONNECTION;
+	        flag |= Capabilities.CLIENT_MULTI_STATEMENTS;
+	        flag |= Capabilities.CLIENT_MULTI_RESULTS;
+	        //boolean useHandshakeV10 = MycatServer.getInstance().getConfig().getSystem().getUseHandshakeV10() == 1;
+	        //if(useHandshakeV10) {
+	        	flag |= Capabilities.CLIENT_PLUGIN_AUTH;
+	        //}	        
+	        	
+	        //flag |= Capabilities.CLIENT_DEPRECATE_EOF;
 	        return flag;
 	    }
 

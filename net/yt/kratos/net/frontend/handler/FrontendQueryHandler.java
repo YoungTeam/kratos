@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 import yt.kratos.mysql.proto.ErrorCode;
 import yt.kratos.net.frontend.FrontendConnection;
 import yt.kratos.net.frontend.hanlder.command.BeginHandler;
+import yt.kratos.net.frontend.hanlder.command.DropHandler;
 import yt.kratos.net.frontend.hanlder.command.KillHandler;
 import yt.kratos.net.frontend.hanlder.command.SavepointHandler;
 import yt.kratos.net.frontend.hanlder.command.SelectHandler;
@@ -96,6 +97,9 @@ public class FrontendQueryHandler implements QueryHandler{
         case ServerParse.ROLLBACK:
             c.rollback();
             break;
+        case ServerParse.DROP:
+        	DropHandler.handle(sql, c, rs >>> 8);
+        	break;
         default:
             c.execute(sql, rs);
         }		

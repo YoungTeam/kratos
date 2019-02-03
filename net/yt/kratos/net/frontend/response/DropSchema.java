@@ -13,24 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package yt.kratos.config;
+package yt.kratos.net.frontend.response;
+
+import yt.kratos.net.frontend.FrontendConnection;
 
 /**
- * @ClassName: Versions
- * @Description: 版本说明
+ * @ClassName: DropSchema
+ * @Description: TODO(这里用一句话描述这个类的作用)
  * @author YoungTeam
- * @date 2019年1月12日 上午12:37:23
+ * @date 2019年2月1日 下午3:57:14
  *
  */
-public interface Versions {
-    /** 协议版本 */
-    public static byte PROTOCOL_VERSION = 10;
-
-    /** 服务器版本 */
-    public static String SERVER_NAME = "Kratos Server";
-    
-    /**前一段是提供给Client MySQL服务版本,不提供类似JDBC执行相关show语句会自动关闭，后一段是Kratos自己的版本**/
-    public static String SERVER_VERSION = "5.5.41-1.0.0";
-    
-    public static String AUTHOR = "yangting@sogou-inc.com";
+public class DropSchema {
+	  public static void response(FrontendConnection c,String stmt) {
+		  c.writeOk();
+	  }
 }

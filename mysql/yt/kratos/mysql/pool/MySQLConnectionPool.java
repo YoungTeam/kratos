@@ -43,8 +43,8 @@ import yt.kratos.mysql.MySQLDataSource;
 import yt.kratos.net.backend.BackendConnection;
 import yt.kratos.net.backend.mysql.MySQLConnection;
 import yt.kratos.net.backend.mysql.MySQLConnectionFactory;
-import yt.kratos.net.backend.mysql.handler.MySQLChannelPoolHandler;
 import yt.kratos.net.backend.mysql.handler.MySQLInitHandler;
+import yt.kratos.net.backend.mysql.handler.factory.MySQLChannelPoolHandler;
 import yt.kratos.net.backend.mysql.handler.factory.MySQLHandlerFactory;
 
 
@@ -112,7 +112,7 @@ public class MySQLConnectionPool {
         this.bootstrap.option(ChannelOption.SO_RCVBUF, SocketConfig.Backend_Socket_Recv_Buf);
         this.bootstrap.option(ChannelOption.SO_SNDBUF, SocketConfig.Backend_Socket_Send_Buf);
         this.bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS,SocketConfig.CONNECT_TIMEOUT_MILLIS);
-        this.bootstrap.option(ChannelOption.SO_TIMEOUT,SocketConfig.SO_TIMEOUT);
+        //this.bootstrap.option(ChannelOption.SO_TIMEOUT,SocketConfig.SO_TIMEOUT);
         this.bootstrap.option(ChannelOption.TCP_NODELAY, true);
         this.bootstrap.option(ChannelOption.SO_KEEPALIVE, true);
         this.bootstrap.option(ChannelOption.SO_REUSEADDR, true);
@@ -131,8 +131,8 @@ public class MySQLConnectionPool {
          
          try {
 			this.latch.await();
-			logger.info("MySQL Backend connection(count:{}) succed ",this.channelPool.acquiredChannelCount());
 			this.markInit();			
+			logger.info("MySQL Backend connection(count:{}) succed ",this.channelPool.acquiredChannelCount());
 			//初始化connections
 			/*int i =0;
 			for(Future<Channel> fch:futureList){
@@ -149,6 +149,7 @@ public class MySQLConnectionPool {
 			this.latch = null; //for gc
 		}
          
+        //不能用netty自带的IdleStateHandler 会阻塞
         this.initIdleCheck();//心跳检测链接状态
         
     }
@@ -235,16 +236,15 @@ public class MySQLConnectionPool {
 		//如果initSize下的链接数不够，则需要创建新的链接
 		this.latch = new CountDownLatch(1);//初始化链接同步latch
 */		Future<Channel> fch = this.channelPool.acquire();	
-
-		System.out.println(this.channelPool.acquiredChannelCount());
 		//this.channelPool.release(channel)
 		try {
 			fch.sync();
 			//this.latch.await();
 			Channel ch = fch.get();//.get(500, TimeUnit.SECONDS);
 			MySQLInitHandler initHandler = (MySQLInitHandler)ch.pipeline().get(MySQLInitHandler.HANDLER_NAME);
+			initHandler.getConnection().await();
 			mysqlConn = initHandler.getConnection();
-			logger.info("Get MySQLConnection"+mysqlConn);
+			logger.info("Get MySQLConnection(total:"+this.channelPool.acquiredChannelCount()  +")"+mysqlConn);
 			//this.putBackendConnection(mysqlConn);
 			return mysqlConn;
 		} catch (InterruptedException | ExecutionException e) {
@@ -279,9 +279,13 @@ public class MySQLConnectionPool {
     }	*/
 	
     public void recycle(BackendConnection backend) {
-    	//this.channelPool.release(backend.getCh());
+    	this.channelPool.release(backend.getCh());
     	
     	//putBackendConnection((MySQLConnection)backend);
+    }
+
+    public void discard(BackendConnection backend){
+        logger.info("backendConnection discard it");
     }
     
 	/**

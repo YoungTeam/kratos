@@ -68,12 +68,17 @@ public class FrontendServer {
 	                    .childHandler(
 	                    		new FrontendHandlerFactory()
 	                    )
+	                     
+	                    //.option(ChannelOption.SO_KEEPALIVE, true)
 	                    //设置ByteBuf对象的创建方式，PooledByteBufAllocator：可以重复利用之前分配的内存空间
 	                    .option(ChannelOption.ALLOCATOR,PooledByteBufAllocator.DEFAULT)
 	                    //链接超时毫秒数
 		                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, SocketConfig.CONNECT_TIMEOUT_MILLIS)
+		                .childOption(ChannelOption.TCP_NODELAY, true)
+		                .childOption(ChannelOption.SO_KEEPALIVE, true)
 		                //控制读取操作将阻塞多少毫秒
 		                .option(ChannelOption.SO_TIMEOUT, SocketConfig.SO_TIMEOUT);	
+	            
 
 	            ChannelFuture sync = server.bind(Kratos.SERVER_PORT).sync();
 	            sync.channel().closeFuture().sync();

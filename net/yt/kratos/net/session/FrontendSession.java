@@ -127,7 +127,7 @@ public class FrontendSession implements Session{
             backend = Kratos.DataSource().get(this.conn.getSchema()).getDataPool().getBackendConnection();//  this.conn.getDataSource().getDataPool().getBackendConnection();
             backend.setSession(this);//后端链接绑定Session
             target.put(key, backend);
-            
+            logger.info("Get BackendConnection"+backend);
         }
         return backend;
     }    

@@ -13,15 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package yt.kratos.net.backend.mysql.handler;
+package yt.kratos.net.backend.mysql.handler.factory;
+
+import io.netty.channel.Channel;
+import io.netty.channel.pool.ChannelPoolHandler;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.netty.channel.Channel;
-import io.netty.channel.pool.ChannelPoolHandler;
 import yt.kratos.net.backend.mysql.MySQLConnection;
 import yt.kratos.net.backend.mysql.MySQLConnectionFactory;
+import yt.kratos.net.backend.mysql.handler.MySQLAuthHandler;
+import yt.kratos.net.backend.mysql.handler.MySQLExceptionHandler;
+import yt.kratos.net.backend.mysql.handler.MySQLInitHandler;
 import yt.kratos.net.codec.MySQLPacketDecoder;
 
 /**
@@ -63,13 +67,14 @@ public class MySQLChannelPoolHandler implements ChannelPoolHandler {
 	public void channelCreated(Channel ch) throws Exception {
         MySQLConnection connection = (MySQLConnection)factory.getConnection();
         connection.setCh(ch);
-        //FrontendAuthHandler authHandler = new FrontendAuthHandler(conn);
         MySQLInitHandler initHandler = new MySQLInitHandler(connection);
         MySQLAuthHandler authHandler = new MySQLAuthHandler(connection);
-        //BackendTailHandler tailHandler = new BackendTailHandler(connection);*/
+        MySQLExceptionHandler exceptionHandler = new MySQLExceptionHandler(connection);
+        
         ch.pipeline().addLast(new MySQLPacketDecoder());
         ch.pipeline().addLast(MySQLInitHandler.HANDLER_NAME, initHandler);
         ch.pipeline().addLast(authHandler);
+        ch.pipeline().addLast(exceptionHandler);
         
         logger.info("Create a new MySQLConnection"+connection);
 	}

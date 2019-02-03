@@ -42,6 +42,8 @@ public class ServerParse {
     public static final int USE = 14;
     public static final int EXPLAIN = 15;
     public static final int KILL_QUERY = 16;
+    public static final int DROP = 17;
+    
 
     public static int parse(String stmt) {
         for (int i = 0; i < stmt.length(); ++i) {
@@ -63,7 +65,7 @@ public class ServerParse {
                 return commitCheck(stmt, i);
             case 'D':
             case 'd':
-                return deleteCheck(stmt, i);
+                return dCheck(stmt, i);
             case 'E':
             case 'e':
                 return explainCheck(stmt, i);
@@ -196,24 +198,58 @@ public class ServerParse {
         return OTHER;
     }
 
-    // DELETE' '
-    static int deleteCheck(String stmt, int offset) {
-        if (stmt.length() > offset + 6) {
-            char c1 = stmt.charAt(++offset);
-            char c2 = stmt.charAt(++offset);
-            char c3 = stmt.charAt(++offset);
-            char c4 = stmt.charAt(++offset);
-            char c5 = stmt.charAt(++offset);
-            char c6 = stmt.charAt(++offset);
-            if ((c1 == 'E' || c1 == 'e') && (c2 == 'L' || c2 == 'l') && (c3 == 'E' || c3 == 'e')
-                    && (c4 == 'T' || c4 == 't') && (c5 == 'E' || c5 == 'e')
-                    && (c6 == ' ' || c6 == '\t' || c6 == '\r' || c6 == '\n')) {
-                return DELETE;
+    // DCheck' '
+    static int dCheck(String stmt, int offset) {
+        if (stmt.length() > ++offset) {
+            switch (stmt.charAt(offset)) {
+            case 'E':
+            case 'e':
+                return deleteCheck(stmt, offset);
+            case 'R':
+            case 'r':
+                return dropCheck(stmt, offset);
+            default:
+                return OTHER;
             }
         }
         return OTHER;
-    }
+    	
 
+    }
+    
+    //DROP' '
+    static int dropCheck(String stmt, int offset){
+		if (stmt.length() > offset + 5) {
+		    char c1 = stmt.charAt(++offset);
+		    char c2 = stmt.charAt(++offset);
+		    char c3 = stmt.charAt(++offset);
+		    if ((c1 == 'O' || c1 == 'o')  && (c2 == 'P' || c2 == 'p')
+		        && (c3 == ' ' || c3 == '\t' || c3 == '\r' || c3 == '\n')) {
+		    	 return (offset << 8) | DROP;
+		    }
+		}		
+		return OTHER;   	    	
+    }
+    
+    //DELETE' '
+    static int deleteCheck(String stmt, int offset){
+    	
+		if (stmt.length() > offset + 5) {
+		    char c1 = stmt.charAt(++offset);
+		    char c2 = stmt.charAt(++offset);
+		    char c3 = stmt.charAt(++offset);
+		    char c4 = stmt.charAt(++offset);
+		    char c5 = stmt.charAt(++offset);
+		    if ((c1 == 'L' || c1 == 'l')  && (c2 == 'E' || c2 == 'e')
+		        && (c3 == 'T' || c3 == 't') && (c4 == 'E' || c4 == 'e')
+		        && (c5 == ' ' || c5 == '\t' || c5 == '\r' || c5 == '\n')) {
+		        return DELETE;
+		    }
+		}
+		
+		return OTHER;   	
+    }
+    
     // INSERT' '
     static int insertCheck(String stmt, int offset) {
         if (stmt.length() > offset + 6) {

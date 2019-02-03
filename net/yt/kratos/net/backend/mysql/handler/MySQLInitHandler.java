@@ -16,7 +16,6 @@
 package yt.kratos.net.backend.mysql.handler;
 
 import io.netty.channel.ChannelHandlerAdapter;
-import yt.kratos.net.BaseHandler;
 import yt.kratos.net.backend.mysql.MySQLConnection;
 
 

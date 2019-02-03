@@ -102,4 +102,8 @@ public interface Capabilities {
     // 通知服务器客户端可以处理由多语句或者存储过程执行生成的多结果集。
     // 当打开CLIENT_MULTI_STATEMENTS时，这个标志自动的被打开。
     int CLIENT_MULTI_RESULTS = 131072;	
+    
+    int CLIENT_PLUGIN_AUTH = 0x00080000; // 524288
+    
+    int  CLIENT_DEPRECATE_EOF = 0x01000000;
 }

@@ -102,7 +102,7 @@ public abstract class AbstractConnection {
     }	
    
 	
-	protected  boolean close(){
+	public  boolean close(){
         if (isClosed.get()) {
             return false;
         } else {

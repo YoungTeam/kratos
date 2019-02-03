@@ -26,6 +26,7 @@ import yt.kratos.exception.UnknownCharsetException;
 import yt.kratos.exception.UnknownTxIsolationException;
 import yt.kratos.mysql.packet.CommandPacket;
 import yt.kratos.mysql.packet.HandshakeInitialPacket;
+import yt.kratos.mysql.packet.HandshakeInitialPacketV10;
 import yt.kratos.mysql.packet.HandshakeResponsePacket;
 import yt.kratos.mysql.packet.MySQLPacket;
 import yt.kratos.mysql.pool.MySQLConnectionPool;
@@ -92,6 +93,7 @@ public class MySQLConnection  extends BackendConnection{
     	this.mySqlDataPool = mySqlDataPool;
         this.syncLatch = new CountDownLatch(1);
         this.cmdQue = new ConcurrentLinkedQueue<Command>();
+        this.isAuthenticated = false;
     }
     
     public boolean isAuthenticated() {
@@ -314,14 +316,6 @@ public class MySQLConnection  extends BackendConnection{
 	    }
 
 		/* 
-		* @see yt.kratos.net.AbstractConnection#close()
-		*/ 
-		@Override
-		public boolean close() {
-			return super.close();
-		}
-
-		/* 
 		* @see yt.kratos.net.backend.BackendConnection#recycle()
 		*/ 
 		@Override
@@ -330,4 +324,19 @@ public class MySQLConnection  extends BackendConnection{
 		        logger.info("backendConnection has been recycled");
 		        this.mySqlDataPool.recycle(this);//.putBackendConnection(this);
 		}	
+		
+		public void await(){
+			if(this.syncLatch!=null)
+				try {
+					this.syncLatch.await();
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+		}
+		
+	    public void discard(){
+	        mySqlDataPool.discard(this);
+	        close();
+	    }
 }

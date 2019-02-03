@@ -57,6 +57,8 @@ public abstract class BackendConnection extends AbstractConnection{
                                   .append(Thread.currentThread().getName())
                                   .append(",class=")
                                   .append(getClass().getSimpleName())
+                                  .append(",id=")
+                                  .append(this.id)
                                   .append(",ch=")
                                   .append(ch.id())
                                   .append(']')
